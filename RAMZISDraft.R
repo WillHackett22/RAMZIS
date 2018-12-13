@@ -1,11 +1,45 @@
-#JacTanIterFunction Script
+RAMZIS Draft Script2
 #Will Hackett
 #9-6-18
-#Functions for Within and Between Similarity Measures of Glycopeptides
-#Expected input: CSV files that have columns of total signal values from glycresoft output
-#Expected input Cont: Files should be glycopeptides for a single protein
-#Expected input cont: eg File1 and File2 should only have values from AGP1 to compare AGP1
-#Expected input cont: The first column should be the glycopeptide, all others are signal columns from different samples
+#Functions for Ranking Glycopeptides based off of comparative similarity metrics
+#Final Function:
+#RAMZIS(FileList1,FileList2,Norm1,Norm2,kmin)
+#If your data is pre-normalized: Use a lower level function
+#FileList1/2: List of GlycReSoft output files
+#Norm1/2: Normalization Factor pulled from PEAKS analysis, defaults to all being equal
+#kmin= minimum number of observations a glycopeptide  must have in a sample group to be observed
+##
+##Previous Expected Input
+##Expected input: CSV files that have columns of total signal values from glycresoft output
+##Expected input Cont: Files should be glycopeptides for a single protein
+##Expected input cont: eg File1 and File2 should only have values from AGP1 to compare AGP1
+##Expected input cont: The first column should be the glycopeptide, all others are signal columns from different samples
+#
+#RAMZIS Function Structure
+#RAMZIS
+#  df1=GlycReRead(FileList1)
+#  df2=GlycReRead(FileList2)
+#  #Graphical Display of Comparative Similarity By Group
+#  PeptideSegment(df1,df2,kmin,simtype,rel,OverallName,SampleName1,SampleName2)
+#    LoopThroughUniquePeptideBackbones:
+#      WithinS1=WithinSim(Subset(df1),kmin)
+#        BetweenSim(sample(Subset(df1)),sample(Subset(df1)),kmin) 
+#      WithinS2=WithinSim(Subset(df2),kmin)
+#        BetweenSim(sample(Subset(df2)),sample(Subset(df2)),kmin)
+#      Between12=BetweenSim(Subset(df1),Subset(df2),kmin)
+#      Simplot(WithinS1,WithinS2,Between12)
+#        Boxplot(WithinS1,WithinS2,main=paste(OverallName,Backbone),names=c(SampleName1,SampleName2))
+#		 Abline(Between12)
+#        Labeling
+#      EndPlot
+#      RAMZISPeptideBackbone
+#    EndLoop
+#  RAMZISPeptideBackbone
+#  RAMZISProtein
+#  RAMZISProteome
+#  WithinSim1=Within(df1)
+#  WithinSim2=Within(df2)
+#  BetweenSim=
 #
 #Functions:
 #WithinSim
@@ -492,7 +526,7 @@ AdvancedSimPlot<-function(filename1,filename2,kmin=2,simtype="Tanimoto",PlotTitl
 }
 
 #Function to separate glycopeptides by same peptide backbone
-PeptideSegment<-function(filename1,filename2,kmin=2,simtype="Tanimoto",rel=TRUE,OverallName,Sample1,Sample2){
+PeptideSegment<-function(filename1,filename2,kmin=2,simtype="Tanimoto",rel=TRUE,OverallName,SampleName1,SampleName2){
   datfile1<-SimDataClean(filename1,kmin=kmin,rel = rel)
   datfile2<-SimDataClean(filename2,kmin=kmin,rel = rel)
   Rnames1<-row.names(datfile1)
@@ -517,7 +551,7 @@ PeptideSegment<-function(filename1,filename2,kmin=2,simtype="Tanimoto",rel=TRUE,
         k<-which(UniCle1 %in% UniCle2[j])
         temp1<-datfile1[which(NameVec1==k),]
         temp2<-datfile2[which(NameVec2==j),]
-        AdvancedSimPlot(temp1,temp2,kmin=1,simtype = simtype,paste0(OverallName,': ',UniCle2[j]),Sample1,Sample2)
+        AdvancedSimPlot(temp1,temp2,kmin=1,simtype = simtype,paste0(OverallName,': ',UniCle2[j]),SampleName1,SampleName2)
         failvec1<-c(failvec1,k)
       } else {
         failvec2<-c(failvec2,j)
