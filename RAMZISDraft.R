@@ -17,9 +17,9 @@ RAMZIS Draft Script2
 #
 #RAMZIS Function Structure
 #RAMZIS
-#  df1=GlycReRead(FileList1)
-#  df2=GlycReRead(FileList2)
-#  #Graphical Display of Comparative Similarity By Group
+#  df1=GlycReRead(FileList1) #load files from list 1 and format
+#  df2=GlycReRead(FileList2) #load files from list 2 and format
+#  #Comparative Similarity By Group
 #  PeptideSegment(df1,df2,kmin,simtype,rel,OverallName,SampleName1,SampleName2)
 #    LoopThroughUniquePeptideBackbones:
 #      WithinS1=WithinSim(Subset(df1),kmin)
@@ -27,19 +27,20 @@ RAMZIS Draft Script2
 #      WithinS2=WithinSim(Subset(df2),kmin)
 #        BetweenSim(sample(Subset(df2)),sample(Subset(df2)),kmin)
 #      Between12=BetweenSim(Subset(df1),Subset(df2),kmin)
-#      Simplot(WithinS1,WithinS2,Between12)
+#      Simplot(WithinS1,WithinS2,Between12) #outputs plot of comparative similarity
 #        Boxplot(WithinS1,WithinS2,main=paste(OverallName,Backbone),names=c(SampleName1,SampleName2))
 #		 Abline(Between12)
 #        Labeling
 #      EndPlot
-#      RAMZISPeptideBackbone
+#      RAMZISPeptideBackbone(WithinS1,WithinS2,Between12) #outputs three ranking lists
+#      Storage<-WithinS1,WithinS2,Between12
+#	   StoragePBLists<-RAMZISPBLists
 #    EndLoop
-#  RAMZISPeptideBackbone
-#  RAMZISProtein
-#  RAMZISProteome
-#  WithinSim1=Within(df1)
-#  WithinSim2=Within(df2)
-#  BetweenSim=
+#  RAMZISProtein(StoragePBListsW1,StoragePBListsW2,StoragePBListsB)
+#  StoragePrLists<-RAMZISPrLists
+#  RAMZISProteome(StoragePrListsW1,StoragePrListsW2,StoragePrListsB)
+#  StoragePmLists<-RAMZISPmLists
+#  Output: StoragePBLists, StoragePrLists, StoragePmLists
 #
 #Functions:
 #WithinSim
