@@ -1,0 +1,42 @@
+#ConfirMZ PseudoCode
+# Goal: Check if product ions and precursor ions have peaks at the same or similar times.
+# 		A greater shift in peak time indicates a greater chance of a false positive identification
+#
+#		Track- hereafter referring to the process of accumulating the intensity data of a specific m/z value for the duration of a gradient
+#
+# Route A: Take a list of known identifications and track their theoretical product ions in parallel
+#				-For Glycopeps From IdentificationList
+#					-Pull From GlycoPep A: Precursor m/z, Product Ion List*
+#					-Track In Parallel:
+#						-Product Ions from Product Ion List
+#						-Precursor Ion
+#						-Smooth curves (impute where there was no ion collection)
+#					-Find peaks in the various m/z
+#					-Check distance between peaks and compare against threshold**
+#				-Spit out (**likelihood of) confirmation for each Glycopep
+#				-For RemainingGlycopeps From Library
+#					-Pull From GlycoPep A: Precursor m/z, Product Ion List*
+#					-Track In Parallel:
+#						-Product Ions from Product Ion List
+#						-Precursor Ion
+#						-Smooth curves (impute where there was no ion collection)
+#					-Find peaks in the various m/z
+#					-Check distance between peaks and compare against threshold**
+#				-Spit out (**likelihood of) confirmation for each Glycopep
+#			-END
+#
+#		* 	= We will likely have to access GlycReSoft functions to get this list
+#		** 	= We can do fun math stuff to get the likelihood of them being from the same distribution or just do a thresholding distance from the precursor peak
+#
+#
+# Route B: Track all MS1 and MS2 Space
+#			-Create MS1 Matrix (n[m/z bins] x m[time points] )
+#			-Create MS2 Matrix (n[m/z bins] x  m[time points] )
+#				-Iterate through all scans and track all m/z bins into matrices
+#				-Smooth tracks
+#			-Identify Peaks in precursors
+#			-Identify clusters of peaks in product ions
+#			-Check precursor peaks against library
+#			-Confirm alignment with product ions
+#			-Check for missed precursor identifications
+#
