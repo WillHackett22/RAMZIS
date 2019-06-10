@@ -58,6 +58,8 @@
 ##removes rows from dataframe
 #SimDataClean
 ##Loads and Cleans a dataframe
+library(MASS)
+library(gtools)
 colMax <- function(data) sapply(data, max, na.rm = TRUE)
 remrow <- function(x, rows) x[-rows,, drop = FALSE]
 remcol <- function(x, cols) x[,-cols , drop = FALSE]
@@ -86,7 +88,7 @@ SimDataClean<-function(filename,kmin=2,rel=TRUE){
     #normalize data by max abundance per sample
     if (rel){
       for (i in 1:ncol(file1)){
-        data1[,i]<- file1[,i]/max(file1[,i])
+        data1[,i]<- as.numeric(file1[,i])/max(as.numeric(file1[,i]),na.rm = T)
       }
     }
   } else if(typeof(filename)=='list'){
@@ -94,6 +96,9 @@ SimDataClean<-function(filename,kmin=2,rel=TRUE){
     data1<-filename
     #print('Program Detected List for filename. Attempting use as dataframe')
   }
+  file1[is.na(file1)]<-0
+  data1[is.na(data1)]<-0
+  
   
   rown<-dim(file1)[1] #GPs
   coln<-dim(file1)[2] #samples
@@ -125,6 +130,34 @@ SimDataClean<-function(filename,kmin=2,rel=TRUE){
   return(data1)
 }
 
+PeptideCollapser<-function(filename,kmin=2,rel=TRUE,sequonvector){
+  datfile1<-SimDataClean(filename,kmin,rel)
+  #find sequon sections
+  #find glycans associated with a sequon
+  #merge same glycans for a given sequon
+  #return datafile with sequon plus glycan
+  Rnames<-row.names(datfile1)
+  Cleaned<-gsub("\\s*\\{[^\\}]+\\}","",gsub("\\s*\\([^\\)]+\\)","",Rnames))
+  Outdat<-data.frame(matrix(NA,nrow=1,ncol=dim(datfile1)[2]))
+  idxterm<-0
+  NewRnameList<-c()
+  for (j in 1:length(sequonvector)){
+    Selection<-grep(sequonvector[j],Cleaned)
+    Glycans<-gsub(".*\\{|\\}","",gsub("\\s*\\([^\\)]+\\)","",Rnames[Selection]))
+    UniGly<-unique(Glycans)
+    for (l in 1:length(UniGly)){
+      RowGlyPep<-paste0(sequonvector[j],'{',UniGly[l],'}')
+      GlySel<-grep(UniGly[l],Glycans)
+      Outdat[idxterm+l,]<-colSums(datfile1[Selection,][GlySel,],na.rm=T)
+      NewRnameList<-c(NewRnameList,RowGlyPep)
+    }
+    idxterm<-idxterm+length(UniGly)
+    
+  }
+  row.names(Outdat)<-NewRnameList
+  return(Outdat)
+}
+
 #Presence Ratio Function
 GPPresence<-function(dataf,kmin=1,rel=TRUE){
   file1<-dataf
@@ -142,7 +175,7 @@ GPPresence<-function(dataf,kmin=1,rel=TRUE){
   return(phold)
 }
 
-TheoreticalDataGenerator<-function(n,g,p,w,alp=2,bet=2){
+TheoreticalDataGenerator<-function(n,g,p,w,alp=2,bet=2,maxim=TRUE,w0=2){
   #n samples
   #g identifications
   #p average presence
@@ -154,6 +187,7 @@ TheoreticalDataGenerator<-function(n,g,p,w,alp=2,bet=2){
   datagen<-data.frame(matrix(0,nrow=g,ncol=n))
   rowsampname<-paste0('Identification',1:g)
   row.names(datagen)<-rowsampname
+  colnames(datagen)<-paste0('Sample',1:n)
   
   #initialize datavalues
   datavals<-rep(0,g)
@@ -166,30 +200,41 @@ TheoreticalDataGenerator<-function(n,g,p,w,alp=2,bet=2){
     }
   }
   
+  #USE MASS:::.rat(mean)$rat to get alphas and betas
   #use rounding to generate betas for each value so they all are within 0-1
   datmean<-mean(datavals)
   for (j in 1:g){
-    if (length(w)==n){
+    if (length(w)==n & length(w)!=g){
       for (l in 1:n){
-        bet0<-10^w[l]
-        alp0<-round(datavals[j],w[l])*10^w[l]
-        datagen[j,l]<-rbeta(1,alp0,bet0)
         
+        FractionObj<-MASS:::.rat(round(datavals[j],w0))$rat
+        FractionObj<-FractionObj/(10^(w[l]-6))
+        bet0<-FractionObj[2]-FractionObj[1]
+        alp0<-FractionObj[1]
+        datagen[j,l]<-rbeta(1,alp0,bet0)
       }
     } else if (length(w)==g) {
-      bet0<-10^w[j]
-      alp0<-round(datavals[j],w[j])*10^w[j]
+      FractionObj<-MASS:::.rat(round(datavals[j],w0))$rat
+      FractionObj<-FractionObj/(10^(w[j]-6))
+      bet0<-FractionObj[2]-FractionObj[1]
+      alp0<-FractionObj[1]
       datagen[j,]<-rbeta(n,alp0,bet0)
     } else {
-      bet0<-10^w[1]
-      alp0<-round(datavals[j],w[1])*10^w[1]
+      FractionObj<-MASS:::.rat(round(datavals[j],w0))$rat
+      FractionObj<-FractionObj/(10^(w[1]-6))
+      bet0<-FractionObj[2]-FractionObj[1]
+      alp0<-FractionObj[1]
       datagen[j,]<-rbeta(n,alp0,bet0)
     }
     padj<-p*exp(mean(unlist(datagen[j,])-datmean))
+    padj[padj>=1]<-0.99999
+    padj[padj<=0]<-0.00001
     keepnum<-rbinom(1,(n-1),padj)+1
-    datagen[j,-match(sample(datagen[j,],keepnum),datagen[j,])]<-0
+    datagen[j,-match(sample(unlist(datagen[j,]),keepnum),datagen[j,])]<-0
   }
-  datagen[which(rowMeans(datagen)==max(rowMeans(datagen))),]<-rep(1,n)
+  if (maxim==TRUE){
+    datagen[which(rowMeans(datagen)==max(rowMeans(datagen))),]<-rep(1,n)
+  }
   FinalOut<-list("Dataset"=datagen,"parameters"=c(n,g,p),"w"=w,"alp"=alp,"bet"=bet,"DistributionCenters"=datavals)
   return(FinalOut)
 }
@@ -349,7 +394,7 @@ WithinSimBootstrap1<-function(filename,kmin=2,rel=TRUE,MVCorrection=TRUE,mn=FALS
         rmlist<-c(rmlist,min(which(combo[,1]==j))) #removes first combination of each number which is singularities
       }
       combo<-combo[-rmlist,]
-    } else if (coln<2) {
+    } else if (coln<=2) {
       print(paste(filename,' has too few samples. This will not work.'))
       stop()
     } else {
@@ -460,9 +505,9 @@ WithinSimBootstrap1<-function(filename,kmin=2,rel=TRUE,MVCorrection=TRUE,mn=FALS
       dT1_<-sqrt(sum(T__Hold[,1]^2))
       dT_1<-sqrt(sum(T__Hold[,2]^2))
       if (dT1_>=dT_1){
-        dT<-sqrt(sum((T__Hold[,1]-T__Hold[,2])^2))/dT1_
+        dT<-sqrt((T__Hold[,1]-T__Hold[,2])^2)/dT1_
       } else if (dT1_<dT_1){
-        dT<-sqrt(sum((T__Hold[,1]-T__Hold[,2])^2))/dT_1
+        dT<-sqrt((T__Hold[,1]-T__Hold[,2])^2)/dT_1
       }
       PHold1<-data.frame(matrix(0,nrow=length(gl1),ncol=1))
       row.names(PHold1)<-gl1
@@ -514,7 +559,7 @@ WithinSimBootstrap2<-function(filename,kmin=2,rel=TRUE,MVCorrection=TRUE,mn=FALS
   # filename is file or matrix: if matrix be sure to normalize first
   # kmim, rel are simdataclean variables
   # MVCorrection only to be touched if you don't want to use A*GPPresence(A)
-  # mn now controls K term 
+  # mn leave alone unless you make custom plotting function. delivers all withins rather than summary
   library('gtools')
   file1<-SimDataClean(filename,kmin,rel) #open file
   #acquire all glycopeptides in file
@@ -525,20 +570,20 @@ WithinSimBootstrap2<-function(filename,kmin=2,rel=TRUE,MVCorrection=TRUE,mn=FALS
   Nsmpl<-CombWRep(coln,coln-1) #get number of n-1 samples with replacements
   combo<-data.frame(matrix(1,nrow=Nsmpl,ncol=(coln-1)))
   if (bootie){
-    if (coln<10 & 2<coln){
+    if (coln<8 & 2<coln){
       combo<-data.frame(gtools::combinations(coln,(coln-1),repeats.allowed = TRUE))
       rmlist<-c()
       for (j in 1:coln){
         rmlist<-c(rmlist,min(which(combo[,1]==j))) #removes first combination of each number which is singularities
       }
       combo<-combo[-rmlist,]
-    } else if (coln<2) {
+    } else if (coln<=2) {
       print(paste(filename,' has too few samples. This will not work.'))
       stop()
     } else {
       print('There be a number of samples here. The bootstrap generation will be slower.')
       combo<-data.frame(matrix(1,nrow=4290,ncol=(coln-1)))
-      for (j in 1:12870){
+      for (j in 1:4290){
         combo[j,]<-sort(sample(coln,(coln-1),replace = TRUE))
       }
       combo<-combo[-duplicated(combo),]
@@ -548,22 +593,30 @@ WithinSimBootstrap2<-function(filename,kmin=2,rel=TRUE,MVCorrection=TRUE,mn=FALS
   }
   
   
-  #tanimoto trackers
+  #jaccard and tanimoto trackers
+  jac1<-rep(0,dim(combo)[1]*coln) # jaccard holder
   tan1<-rep(0,dim(combo)[1]*coln) # tanimoto holder
+  tan1Final<-rep(0,dim(combo)[1])
   tanmathold<-data.frame(matrix(data=0,nrow=(dim(combo)[1]*coln) ,ncol=length(glycopep1)))
   colnames(tanmathold)<-glycopep1
-  
+  tanmatholdW<-data.frame(matrix(data=0,nrow=(dim(combo)[1]*coln) ,ncol=length(glycopep1)))
+  colnames(tanmatholdW)<-glycopep1
   
   #iterate through combinations
   for (j in 1:nrow(combo)){
     #separate datasets for combinations
     temp1<-data.frame(file1[,unlist(combo[j,])]) # subset of first data
     row.names(temp1)<-glycopep1 # GP names
-    temp2<-data.frame(file1) # temp datafile
+    
+    temp2<-file1 # subset of non combo data
     row.names(temp2)<-glycopep1 # GP names
+    
+    #acquire glycopeptides
     gl1<-row.names(temp1)
     gl2<-row.names(temp2)
-    
+    #compare for jaccard
+    M11<-sum(gl1 %in% gl2)
+    jac1[((j-1)*coln)]<-M11/length(glycopep1)
     
     #turns 0s into NAs if want to reduce impact of missing values
     if (MVCorrection!=TRUE){
@@ -571,62 +624,560 @@ WithinSimBootstrap2<-function(filename,kmin=2,rel=TRUE,MVCorrection=TRUE,mn=FALS
       temp2[temp2==0]<-NA
     }
     
-    ## Replace above code with commented code below
-    T1_<-rowMeans(temp1,na.rm =TRUE)
-    T10<-sum(rowMeans(temp1,na.rm =TRUE)^2)
-
-    T11pre<-temp2*T1_
-    row.names(T11pre)<-glycopep1
-    T11pre[is.na(T11pre)]<-0
-    T01<-colSums(temp2^2,na.rm = TRUE)
+    #generate T10, T01, T1_ and T_1
+    if (ncol(temp1)==1){
+      T1_<-data.frame(matrix(temp1[,1],nrow=length(gl1),ncol=1))
+      row.names(T1_)<-gl1
+      T10<-sum(temp1[,1]^2,na.rm = TRUE)
+    } else {
+      T1_<-data.frame(matrix(rowMeans(temp1,na.rm =TRUE),nrow=length(gl1),ncol=1))
+      row.names(T1_)<-gl1
+      T10<-sum(rowMeans(temp1,na.rm =TRUE)^2)
+    }
+    T_1<-temp2
+    row.names(T_1)<-gl2
+    T01<-colSums(temp2^2,na.rm=TRUE)
     
     
     
-    dT1_<-sqrt(sum(T1_^2))
-    dT_1<-sqrt(colSums(temp2^2))
-    dT<-dT_1
-    dT[dT<dT1_]<-dT1_
-    PHold1<-data.frame(matrix(0,nrow=length(glycopep1),ncol=coln))
-    PHold2<-data.frame(matrix(0,nrow=length(glycopep1),ncol=coln))
+    #Bring T11 related terms together
+    T__Hold<-merge(T1_,T_1,by=0,all=TRUE)
+    row.names(T__Hold)<-T__Hold[,1]
+    T__Hold<-T__Hold[,-1]
+    T__Hold[is.na(T__Hold)]<-0
+    
+    dT<-sqrt((T__Hold[,1]-T__Hold[,-1])^2)
+    
+    PHold1<-data.frame(matrix(0,nrow=length(gl1),ncol=1))
+    row.names(PHold1)<-gl1
+    colnames(PHold1)<-'P1'
+    PHold2<-data.frame(matrix(0,nrow=length(gl2),ncol=coln))
     row.names(PHold2)<-gl2
+    colnames(PHold2)<-paste0(1:coln)
     for (m in 1:length(gl1)){
       nacheck<-1-sum(temp1[gl1[m],]==0)/length(temp1[gl1[m],])
       if (is.na(nacheck)){
         nacheck<-0
       }
-      PHold1[m,]<-rep(nacheck,coln)
+      PHold1[gl1[m],]<-nacheck
     }
-    PHold2[temp2==0]<-0
-    PHold2[temp2!=0]<-1
-    PHold<-(PHold2+PHold1)/2
-    
+    for (m in 1:length(gl2)){
+      nacheck<-temp2[gl2[m],]>0
+      nacheck[is.na(nacheck)]<-0
+      PHold2[gl2[m],]<-nacheck
+    }
+    PHold<-merge(PHold1,PHold2,by=0,all=TRUE)
+    row.names(PHold)<-PHold[,1]
+    PHold<-PHold[,-1]
     PHold[is.na(PHold)]<-0
-    
-    
-    presence<-colMeans(PHold,na.rm = FALSE)
+    presence<-(PHold[,1]+PHold[,-1])/2
     if (mn==FALSE){
-      KTerm<-rep(1,coln)+presence
+      KTerm<-1+presence
     } else {
-      KTerm<-rep(mn,coln)
+      KTerm<-mn
     }
     for (l in 1:coln){
-      T11<-T11pre[,l]*(KTerm[l]^-dT[l])
-      TRef<-row.names(T11pre)
-      for (m in 1:length(T11)){
-        tanmathold[((j-1)*coln+l),TRef[m]]<-T11[m]
+      T11<-T__Hold[,1]*T__Hold[,2:(coln+1)]*(KTerm^(-dT))
+      TRef<-row.names(T__Hold)
+      for (m in 1:length(TRef)){
+        tanmathold[((j-1)*coln+l),TRef[m]]<-T11[TRef[m],l]
+        tanmatholdW[((j-1)*coln+l),TRef[m]]<-T11[TRef[m],l]/(T10+T01[l]-sum(T11[,l]))
       }
-      tan1[((j-1)*coln+l)]<-sum(T11)/(T10+T01[l]-sum(T11))
+      tan1[((j-1)*coln+l)]<-sum(T11[,l])/(T10+T01[l]-sum(T11[,l]))
     }
-    
     
     
   }
   
-  Output<-data.frame(matrix(c(rep(0,length(tan1)),tan1),nrow=nrow(combo)*coln,ncol=2))
-  colnames(Output)<-c('Tanimoto')
+  Output<-data.frame(matrix(c(jac1,tan1),nrow=nrow(combo)*coln,ncol=2))
+  colnames(Output)<-c('Jaccard','Tanimoto')
+  tanmatendw<-data.frame(matrix(data=0,nrow=(dim(combo)[1]) ,ncol=length(glycopep1)))
+  colnames(tanmatendw)<-glycopep1
+  for (j in 1:dim(combo)[1]){
+    tanmatendw[j,]<-colMeans(tanmatholdW[((j-1)*coln+1):(j*coln),],na.rm=TRUE)
+    tan1Final[j]<-mean(tan1[((j-1)*coln+1):(j*coln)])
+  }
+  TaniOut<-data.frame(matrix(tan1Final,nrow=dim(combo)[1],ncol=1))
+  colnames(TaniOut)<-c('Tanimoto')
   
-  FinalOut<-list("Summary"=Output,"RankInfo"=tanmathold,"Boot"=combo)
+  FinalOut<-list("Summary"=TaniOut,"Hold"=Output,"RankInfo"=tanmathold,"Boot"=combo,'RankInfoW'=tanmatholdW,'RankInfoFinal'=tanmatendw)
   return(FinalOut)
+}
+
+BetweenSimBootstrap2<-function(filename1,filename2,combo,kmin=2,rel=TRUE,MVCorrection=TRUE,mn=FALSE){
+  #load data and acquire glycopeptides
+  file1<-SimDataClean(filename1,kmin,rel)
+  file2<-SimDataClean(filename2,kmin,rel)
+  glycopep1<-c(row.names(file1))
+  glycopep2<-c(row.names(file2))
+  glycojoint<-unique(c(glycopep1,glycopep2))
+  mergedf<-merge(file1,file2,by=0,all=FALSE)
+  row.names(mergedf)<-mergedf[,1]
+  mergedf<-mergedf[,-1]
+  coln<-dim(file2)[2]
+  
+  jac1<-rep(0,nrow(combo)*coln) # jaccard holder
+  tan1<-rep(0,nrow(combo)*coln) # tanimoto holder
+  tan1Final<-rep(0,dim(combo)[1])
+  coln<-dim(file2)[2]
+  tanmathold<-data.frame(matrix(data=0,nrow=(dim(combo)[1]*coln) ,ncol=length(glycojoint)))
+  colnames(tanmathold)<-glycojoint
+  tanmatholdW<-data.frame(matrix(data=0,nrow=(dim(combo)[1]*coln) ,ncol=length(glycojoint)))
+  colnames(tanmatholdW)<-glycojoint
+  
+  
+  #iterate through all combinations used in within of file 1
+  for (j in 1:nrow(combo)){
+    #separate datasets for combinations
+    temp1<-data.frame(file1[,unlist(combo[j,])]) # subset of first data
+    row.names(temp1)<-glycopep1 # GP names
+    temp2<-file2 # subset of non combo data
+    row.names(temp2)<-glycopep2 # GP names
+    
+    #acquire glycopeptides
+    gl1<-glycopep1
+    gl2<-glycopep2
+    #compare for jaccard
+    M11<-sum(gl1 %in% gl2)
+    jac1[((j-1)*coln)]<-M11/length(glycojoint)
+    
+    #turns 0s into NAs if want to reduce impact of missing values
+    if (MVCorrection!=TRUE){
+      temp1[temp1==0]<-NA
+      temp2[temp2==0]<-NA
+    }
+    
+    #generate T10, T01, T1_ and T_1
+    if (ncol(temp1)==1){
+      T1_<-data.frame(matrix(temp1[,1],nrow=length(gl1),ncol=1))
+      row.names(T1_)<-gl1
+      T10<-sum(temp1[,1]^2,na.rm = TRUE)
+    } else {
+      T1_<-data.frame(matrix(rowMeans(temp1,na.rm =TRUE),nrow=length(gl1),ncol=1))
+      row.names(T1_)<-gl1
+      T10<-sum(rowMeans(temp1,na.rm =TRUE)^2)
+    }
+    T_1<-temp2
+    row.names(T_1)<-gl2
+    T01<-colSums(temp2^2,na.rm=TRUE)
+    
+    
+    
+    #Bring T11 related terms together
+    T__Hold<-merge(T1_,T_1,by=0,all=TRUE)
+    row.names(T__Hold)<-T__Hold[,1]
+    T__Hold<-T__Hold[,-1]
+    T__Hold[is.na(T__Hold)]<-0
+    
+    rowpres<-sum(T1_>0)
+    distMod<-1/sum() #adjusts for presence
+    dT<-sqrt((T__Hold[,1]-T__Hold[,-1])^2)
+    
+    PHold1<-data.frame(matrix(0,nrow=length(gl1),ncol=1))
+    row.names(PHold1)<-gl1
+    colnames(PHold1)<-'P1'
+    PHold2<-data.frame(matrix(0,nrow=length(gl2),ncol=coln))
+    row.names(PHold2)<-gl2
+    colnames(PHold2)<-paste0(1:coln)
+    for (m in 1:length(gl1)){
+      nacheck<-1-sum(temp1[gl1[m],]==0)/length(temp1[gl1[m],])
+      if (is.na(nacheck)){
+        nacheck<-0
+      }
+      PHold1[gl1[m],]<-nacheck
+    }
+    for (m in 1:length(gl2)){
+      nacheck<-temp2[gl2[m],]>0
+      nacheck[is.na(nacheck)]<-0
+      PHold2[gl2[m],]<-nacheck
+    }
+    PHold<-merge(PHold1,PHold2,by=0,all=TRUE)
+    row.names(PHold)<-PHold[,1]
+    PHold<-PHold[,-1]
+    PHold[is.na(PHold)]<-0
+    presence<-(PHold[,1]+PHold[,-1])/2
+    if (mn==FALSE){
+      KTerm<-1+presence
+    } else {
+      KTerm<-mn
+    }
+    for (l in 1:coln){
+      T11<-T__Hold[,1]*T__Hold[,2:(coln+1)]*(KTerm^(-dT))
+      TRef<-row.names(T__Hold)
+      for (m in 1:length(TRef)){
+        tanmathold[((j-1)*coln+l),TRef[m]]<-T11[TRef[m],l]
+        tanmatholdW[((j-1)*coln+l),TRef[m]]<-T11[TRef[m],l]/(T10+T01[l]-sum(T11[,l]))
+      }
+      tan1[((j-1)*coln+l)]<-sum(T11[,l])/(T10+T01[l]-sum(T11[,l]))
+    }
+    
+    
+  }
+  
+  Output<-data.frame(matrix(c(jac1,tan1),nrow=nrow(combo)*coln,ncol=2))
+  colnames(Output)<-c('Jaccard','Tanimoto')
+  tanmatendw<-data.frame(matrix(data=0,nrow=(dim(combo)[1]) ,ncol=length(glycojoint)))
+  colnames(tanmatendw)<-glycojoint
+  for (j in 1:dim(combo)[1]){
+    tanmatendw[j,]<-colMeans(tanmatholdW[((j-1)*coln+1):(j*coln),],na.rm=TRUE)
+    tan1Final[j]<-mean(tan1[((j-1)*coln+1):(j*coln)])
+  }
+  TaniOut<-data.frame(matrix(tan1Final,nrow=dim(combo)[1],ncol=1))
+  colnames(TaniOut)<-c('Tanimoto')
+  
+  FinalOut<-list("Summary"=TaniOut,"Hold"=Output,"RankInfo"=tanmathold,"Boot"=combo,'RankInfoW'=tanmatholdW,'RankInfoFinal'=tanmatendw)
+  return(FinalOut)
+}
+
+###Preserved Symmetry Comparison
+SymmetricalSimBootstrap<-function(filename1,filename2,kmin=2,rel=TRUE,MVCorrection=TRUE,mn=FALSE,bootie=TRUE){
+  #load data and acquire glycopeptides
+  file1<-SimDataClean(filename1,kmin,rel)
+  file2<-SimDataClean(filename2,kmin,rel)
+  glycopep1<-c(row.names(file1))
+  glycopep2<-c(row.names(file2))
+  glycojoint<-unique(c(glycopep1,glycopep2))
+  mergedf<-merge(file1,file2,by=0,all=TRUE)
+  row.names(mergedf)<-mergedf[,1]
+  mergedf<-mergedf[,-1]
+  coln1<-dim(file1)[2]
+  coln2<-dim(file2)[2]
+  cols1<-seq(coln1)
+  cols2<-seq(coln2)
+  
+  Nsmpl2<-CombWRep(coln2,coln2-1)
+  Nsmpl1<-CombWRep(coln1,coln1-1)
+  
+  if (bootie){
+    if (coln1<6 & 2<coln1){
+      Nsmpl1<-CombWRep(coln1,coln1-1)
+      combo1<-data.frame(matrix(1,nrow=Nsmpl1,ncol=(coln1-1)))
+      combo1<-data.frame(gtools::combinations(coln1,(coln1-1),repeats.allowed = TRUE))
+    } else if (coln1<=2) {
+      print(paste(filename1,' has too few samples. This will not work.'))
+      stop()
+    } else {
+      print('There be a number of samples here. The bootstrap generation will be slower.')
+      combo1<-data.frame(matrix(1,nrow=100,ncol=(coln2-1)))
+      for (j in 1:100){
+        combo1[j,]<-sort(sample(coln1,(coln1-1),replace = TRUE))
+      }
+      combo1<-combo1[-duplicated(combo1),]
+    }
+    if (coln2<6 & 2<coln2){
+      Nsmpl2<-CombWRep(coln2,coln2-1)
+      combo2<-data.frame(matrix(1,nrow=Nsmpl2,ncol=(coln2-1)))
+      combo2<-data.frame(gtools::combinations(coln2,(coln2-1),repeats.allowed = TRUE))
+    } else if (coln2<=2) {
+      print(paste(filename2,' has too few samples. This will not work.'))
+      stop()
+    } else {
+      print('There be a number of samples here. The bootstrap generation will be slower.')
+      combo2<-data.frame(matrix(1,nrow=100,ncol=(coln2-1)))
+      for (j in 1:100){
+        combo2[j,]<-sort(sample(coln2,(coln2-1),replace = TRUE))
+      }
+      combo2<-combo2[-duplicated(combo2),]
+    }
+  } else {
+    combo1<-combn(cols1,(coln1-1))
+    combo2<-combn(cols2,(coln1-1))
+  }
+  
+  
+  jac1<-rep(0,nrow(combo1)*nrow(combo2)) # jaccard holder depricated
+  tan1<-rep(0,nrow(combo1)*nrow(combo2)) # tanimoto holder
+  tan1Final<-rep(0,nrow(combo1)*nrow(combo2))
+  tanmathold<-data.frame(matrix(data=0,nrow=(nrow(combo1)*nrow(combo2)) ,ncol=length(glycojoint)))
+  colnames(tanmathold)<-glycojoint
+  tanmatholdW<-t(data.frame(matrix(data=0,nrow=(nrow(combo1)*nrow(combo2)) ,ncol=length(glycojoint))))
+  row.names(tanmatholdW)<-glycojoint
+  #acquire glycopeptides
+  gl1<-glycopep1
+  gl2<-glycopep2
+  
+  #iterate through all combinations used in within of file 1
+  T1_<-data.frame(matrix(0,nrow=length(gl1),ncol=nrow(combo1)))
+  row.names(T1_)<-gl1
+  T10<-data.frame(matrix(0,nrow=1,ncol=nrow(combo1)))
+  PHold1<-data.frame(matrix(0,nrow=length(gl1),ncol=nrow(combo1)))
+  row.names(PHold1)<-gl1
+  for (j in 1:nrow(combo1)){
+    #separate datasets for combinations
+    temp1<-data.frame(file1[,unlist(combo1[j,])]) # subset of first data
+    row.names(temp1)<-glycopep1 # GP names
+    if (MVCorrection!=TRUE){
+      temp1[temp1==0]<-NA
+    }
+    T1_[,j]<-rowMeans(temp1,na.rm =TRUE)
+    T10[,j]<-sum(rowMeans(temp1,na.rm =TRUE)^2)
+    for (m in 1:length(gl1)){
+      nacheck<-1-sum(temp1[gl1[m],]==0)/ncol(temp1)
+      if (is.na(nacheck)){
+        nacheck<-0
+      }
+      PHold1[gl1[m],j]<-nacheck
+    }
+  }
+  #iterate through all combinations used in within of file 2
+  T_1<-data.frame(matrix(0,nrow=length(gl2),ncol=nrow(combo2)))
+  row.names(T_1)<-gl2
+  T01<-data.frame(matrix(0,nrow=1,ncol=nrow(combo2)))
+  PHold2<-data.frame(matrix(0,nrow=length(gl2),ncol=nrow(combo2)))
+  row.names(PHold2)<-gl2
+  for (j in 1:nrow(combo2)){
+    #separate datasets for combinations
+    temp2<-data.frame(file2[,unlist(combo2[j,])]) # subset of first data
+    row.names(temp2)<-glycopep2 # GP names
+    if (MVCorrection!=TRUE){
+      temp2[temp2==0]<-NA
+    }
+    T_1[,j]<-rowMeans(temp2,na.rm =TRUE)
+    T01[,j]<-sum(rowMeans(temp2,na.rm =TRUE)^2)
+    for (m in 1:length(gl2)){
+      nacheck<-1-sum(temp2[gl2[m],]==0)/ncol(temp2)
+      if (is.na(nacheck)){
+        nacheck<-0
+      }
+      PHold2[gl2[m],j]<-nacheck
+    }
+  }
+  
+  T__Hold<-merge(T1_,T_1,by=0,all=TRUE)
+  row.names(T__Hold)<-T__Hold[,1]
+  TRef<-row.names(T__Hold)
+  T__Hold<-T__Hold[,-1]
+  T__Hold[is.na(T__Hold)]<-0
+  PHold<-merge(PHold1,PHold2,by=0,all=TRUE)
+  row.names(PHold)<-PHold[,1]
+  PHold<-PHold[,-1]
+  PHold[is.na(PHold)]<-0
+  #Bring T11 related terms together
+  ncomb1<-nrow(combo1)
+  ncomb2<-nrow(combo2)
+  ncombt<-ncomb1+ncomb2
+  ncombs<-ncomb1*ncomb2
+  for (j in 1:nrow(combo1)){
+    dT<-abs(T__Hold[,j]-T__Hold[,(ncomb1+1):ncombt])
+    row.names(dT)<-row.names(T__Hold)
+    presence<-(PHold[,j]+PHold[,(ncomb1+1):ncombt])/2
+    if (mn==FALSE){
+      KTerm<-1+presence
+      row.names(KTerm)<-row.names(PHold)
+    } else {
+      KTerm<-mn
+    }
+    for (m in 1:length(TRef)){
+      tanmathold[(((j-1)*ncomb2)+1):(j*ncomb2),TRef[m]]<-unlist(T__Hold[TRef[m],j]*T__Hold[TRef[m],(ncomb1+1):ncombt]*(KTerm[TRef[m],]^(-dT[TRef[m],])))
+    }
+    T11<-t(tanmathold[(((j-1)*ncomb2)+1):(j*ncomb2),])
+    for (m in 1:length(TRef)){
+      tanmatholdW[TRef[m],(((j-1)*ncomb2)+1):(j*ncomb2)]<-unlist(T11[TRef[m],]/(unlist(T10[j])+T01-colSums(T11,na.rm=T)))
+    }
+  }
+  tan1<-colSums(tanmatholdW)
+  #calculate null
+  colnt<-coln1+coln2
+  if (bootie){
+    if (colnt<6 & 2<colnt){
+      Nsmplt1<-CombWRep(colnt,coln1)
+      Nsmplt2<-CombWRep(colnt,coln2)
+      combot1<-data.frame(matrix(1,nrow=Nsmplt1,ncol=coln1))
+      combot1<-data.frame(gtools::combinations(colnt,coln1,repeats.allowed = TRUE))
+      combot2<-data.frame(matrix(1,nrow=Nsmplt2,ncol=coln2))
+      combot2<-data.frame(gtools::combinations(colnt,coln2,repeats.allowed = TRUE))
+    } else {
+      print('There be a number of samples here. The bootstrap generation will be slower.')
+      combot1<-data.frame(matrix(1,nrow=200,ncol=coln1))
+      combot2<-data.frame(matrix(1,nrow=200,ncol=coln2))
+      for (j in 1:200){
+        combot1[j,]<-sort(sample(colnt,coln1,replace = TRUE))
+        combot2[j,]<-sort(sample(colnt,coln2,replace = TRUE))
+      }
+      combot1<-combot1[-which(duplicated(combot1)),]
+      combot2<-combot2[-which(duplicated(combot2)),]
+    }
+    combot<-rbind(combot1,combot2,all=T)
+    combot<-combot[-which(duplicated(combot)),]
+    combot1<-combot[1:floor(dim(combot)[1]/2),]
+    combot2<-combot[floor(dim(combot)[1]/2):dim(combot)[1],]
+  } else {
+    combot<-'Error'
+  }
+  
+  
+  jacN<-rep(0,nrow(combot1)*nrow(combot2)) # jaccard holder depricated
+  tanN<-rep(0,nrow(combot1)*nrow(combot2)) # tanimoto holder
+  tanNFinal<-rep(0,nrow(combot1)*nrow(combot2))
+  tanmatholdN<-data.frame(matrix(data=0,nrow=(nrow(combot1)*nrow(combot2)) ,ncol=length(glycojoint)))
+  colnames(tanmatholdN)<-glycojoint
+  tanmatholdNW<-t(data.frame(matrix(data=0,nrow=(nrow(combot1)*nrow(combot2)) ,ncol=length(glycojoint))))
+  row.names(tanmatholdNW)<-glycojoint
+  #acquire glycopeptides
+  gl1<-glycopep1
+  gl2<-glycopep2
+  gj<-glycojoint
+  
+  #first set of null distributions
+  T1_N<-data.frame(matrix(0,nrow=length(gj),ncol=nrow(combot1)))
+  row.names(T1_N)<-gj
+  T10N<-data.frame(matrix(0,nrow=1,ncol=nrow(combot1)))
+  PHoldN1<-data.frame(matrix(0,nrow=length(gj),ncol=nrow(combot1)))
+  row.names(PHoldN1)<-gj
+  for (j in 1:nrow(combot1)){
+    #separate datasets for combinations
+    temp1<-data.frame(mergedf[,unlist(combot1[j,])]) # subset of first data
+    row.names(temp1)<-gj # GP names
+    if (MVCorrection!=TRUE){
+      temp1[temp1==0]<-NA
+    }
+    T1_N[,j]<-rowMeans(temp1,na.rm =TRUE)
+    T10N[,j]<-sum(rowMeans(temp1,na.rm =TRUE)^2)
+    for (m in 1:length(gj)){
+      nacheck<-1-sum(temp1[gj[m],]==0)/ncol(temp1)
+      if (is.na(nacheck)){
+        nacheck<-0
+      }
+      PHoldN1[gj[m],j]<-nacheck
+    }
+  }
+  #second set of null distributions
+  T_1N<-data.frame(matrix(0,nrow=length(gj),ncol=nrow(combot2)))
+  row.names(T_1N)<-gj
+  T01N<-data.frame(matrix(0,nrow=1,ncol=nrow(combot2)))
+  PHoldN2<-data.frame(matrix(0,nrow=length(gj),ncol=nrow(combot2)))
+  row.names(PHoldN2)<-gj
+  for (j in 1:nrow(combot2)){
+    #separate datasets for combinations
+    temp2<-data.frame(mergedf[,unlist(combot2[j,])]) # subset of first data
+    row.names(temp2)<-gj # GP names
+    if (MVCorrection!=TRUE){
+      temp2[temp2==0]<-NA
+    }
+    T_1N[,j]<-rowMeans(temp2,na.rm =TRUE)
+    T01N[,j]<-sum(rowMeans(temp2,na.rm =TRUE)^2)
+    for (m in 1:length(gj)){
+      nacheck<-1-sum(temp2[gj[m],]==0)/ncol(temp2)
+      if (is.na(nacheck)){
+        nacheck<-0
+      }
+      PHoldN2[gj[m],j]<-nacheck
+    }
+  }
+  
+  T__HoldN<-merge(T1_N,T_1N,by=0,all=TRUE)
+  row.names(T__HoldN)<-T__HoldN[,1]
+  T__HoldN<-T__HoldN[,-1]
+  T__HoldN[is.na(T__HoldN)]<-0
+  PHoldN<-merge(PHoldN1,PHoldN2,by=0,all=TRUE)
+  row.names(PHoldN)<-PHoldN[,1]
+  PHoldN<-PHoldN[,-1]
+  PHoldN[is.na(PHoldN)]<-0
+  #Bring T11N related terms together
+  ncombt1<-nrow(combot1)
+  ncombt2<-nrow(combot2)
+  ncombtt<-ncombt1+ncombt2
+  ncombts<-ncombt1*ncombt2
+  for (j in 1:nrow(combot1)){
+    dTN<-abs(T__HoldN[,j]-T__HoldN[,(ncombt1+1):ncombtt])
+    row.names(dTN)<-row.names(T__HoldN)
+    presenceN<-(PHoldN[,j]+PHoldN[,(ncombt1+1):ncombtt])/2
+    if (mn==FALSE){
+      KTermN<-1+presenceN
+      row.names(KTermN)<-row.names(PHoldN)
+    } else {
+      KTermN<-mn
+    }
+    for (m in 1:length(TRef)){
+      tanmatholdN[(((j-1)*ncombt2)+1):(j*ncombt2),TRef[m]]<-unlist(T__HoldN[TRef[m],j]*T__HoldN[TRef[m],(ncombt1+1):ncombtt]*(KTermN[TRef[m],]^(-dTN[TRef[m],])))
+    }
+    T11N<-t(tanmatholdN[(((j-1)*ncombt2)+1):(j*ncombt2),])
+    for (m in 1:length(TRef)){
+      tanmatholdNW[TRef[m],(((j-1)*ncombt2)+1):(j*ncombt2)]<-unlist(T11N[TRef[m],]/(unlist(T10N[j])+T01N-colSums(T11N,na.rm=T)))
+    }
+  }
+  tanN<-colSums(tanmatholdNW)
+  
+  #calculate actual similarity
+  T1_a<-rowMeans(file1,na.rm =TRUE)
+  T10a<-sum(rowMeans(file1,na.rm =TRUE)^2)
+  presence1<-data.frame(matrix(0,nrow=length(gl1),ncol=1))
+  row.names(presence1)<-gl1
+  for (m in 1:length(gl1)){
+    nacheck<-1-sum(file1[gl1[m],]==0)/ncol(file1)
+    if (is.na(nacheck)){
+      nacheck<-0
+    }
+    presence1[gl1[m],1]<-nacheck
+  }
+  T_1a<-rowMeans(file2,na.rm =TRUE)
+  T01a<-sum(rowMeans(file2,na.rm =TRUE)^2)
+  presence2<-data.frame(matrix(0,nrow=length(gl2),ncol=1))
+  row.names(presence2)<-gl2
+  for (m in 1:length(gl2)){
+    nacheck<-1-sum(file2[gl2[m],]==0)/ncol(file2)
+    if (is.na(nacheck)){
+      nacheck<-0
+    }
+    presence2[gl2[m],1]<-nacheck
+  }
+  presenceA<-merge(presence1,presence2,by=0,all=TRUE)
+  row.names(presenceA)<-presenceA[,1]
+  presenceA<-presenceA[,-1]
+  presenceA[is.na(presenceA)]<-0
+  THA<-merge(T1_a,T_1a,by=0,all=TRUE)
+  row.names(THA)<-THA[,1]
+  THA<-THA[,-1]
+  THA[is.na(THA)]<-0
+  if (mn==FALSE){
+    KTerm<-data.frame(matrix((1+rowMeans(presenceA,na.rm=T)),nrow=length(TRef),ncol=1))
+    row.names(KTerm)<-row.names(presenceA)
+  } else {
+    KTerm<-rep(mn,nrow(THA))
+    row.names(KTerm)<-row.names(presenceA)
+  }
+  dTA<-data.frame(matrix(abs(THA[,1]-THA[,2]),nrow=length(TRef),ncol=1))
+  row.names(dTA)<-TRef
+  tanmatA<-data.frame(matrix(0,ncol=length(TRef),nrow=1))
+  tanmatAFinal<-data.frame(matrix(0,ncol=length(TRef),nrow=1))
+  colnames(tanmatA)<-TRef
+  colnames(tanmatAFinal)<-TRef
+  T11A<-data.frame(matrix(0,nrow=length(TRef),ncol=1))
+  row.names(T11A)<-TRef
+  for (m in 1:length(TRef)){
+    T11A[TRef[m],1]<-THA[TRef[m],1]*THA[TRef[m],2]*(KTerm[TRef[m],1]^(-dTA[TRef[m],1]))
+    tanmatA[1,TRef[m]]<-unlist(T11A[TRef[m],])
+  }
+  for (m in 1:length(TRef)){
+    tanmatAFinal[1,TRef[m]]<-unlist(T11A[TRef[m],]/(T10a+T01a-sum(T11A,na.rm=T)))
+  }
+  taniActualF<-sum(tanmatAFinal)
+  
+  
+  
+  Output<-data.frame(matrix(c(jac1,tan1),nrow=ncomb1*ncomb2,ncol=2))
+  colnames(Output)<-c('Jaccard','Tanimoto')
+  TaniOut<-data.frame(matrix(tan1,nrow=ncomb1*ncomb2[1],ncol=1))
+  colnames(TaniOut)<-c('Tanimoto')
+  NullOut<-data.frame(matrix(tanN,nrow=ncombts,ncol = 1))
+  colnames(NullOut)<-c('NullTani')
+  FinalOut<-list("Summary"=TaniOut,"Hold"=Output,"RankInfo"=tanmathold,"NullRankInfoFinal"=tanmatholdNW,"NullOut"=NullOut,'RankInfoFinal'=tanmatholdW,"RankInfoActual"=tanmatAFinal,"Actual"=taniActualF,"Boot"=list(combo1,combo2,combot1,combot2))
+  return(FinalOut)
+}
+
+
+SimDensFunction<-function(datavec,xlim=c(0,1),smooth=T,bins=100){
+  regions<-seq(xlim[1],xlim[2],by=((xlim[2]-xlim[1])/bins))
+  counts<-rep(0,bins-1)
+  for (j in 1:(bins-1)){
+    if (j==(bins-1)){
+      counts[j]<-sum(datavec<=regions[j+1] & datavec>=regions[j])
+    } else {
+      counts[j]<-sum(datavec<regions[j+1] & datavec>=regions[j])
+    }
+    
+  }
+  return(counts/sum(counts))      
 }
 
 BetweenSimBootstrap<-function(filename1,filename2,combo,kmin=2,rel=TRUE,MVCorrection=TRUE,mn=FALSE){
@@ -645,7 +1196,9 @@ BetweenSimBootstrap<-function(filename1,filename2,combo,kmin=2,rel=TRUE,MVCorrec
   tan1<-rep(0,nrow(combo)*coln) # tanimoto holder
   coln<-dim(file2)[2]
   tanmathold<-data.frame(matrix(data=0,nrow=(dim(combo)[1]*coln) ,ncol=length(glycojoint)))
+  tanmatholdW<-data.frame(matrix(data=0,nrow=(dim(combo)[1]*coln) ,ncol=length(glycojoint)))
   colnames(tanmathold)<-glycojoint
+  colnames(tanmatholdW)<-glycojoint
   
   #iterate through all combinations used in within of file 1
   for (j in 1:nrow(combo)){
@@ -721,9 +1274,9 @@ BetweenSimBootstrap<-function(filename1,filename2,combo,kmin=2,rel=TRUE,MVCorrec
       dT1_<-sqrt(sum(T__Hold[,1]^2))
       dT_1<-sqrt(sum(T__Hold[,2]^2))
       if (dT1_>=dT_1){
-        dT<-sqrt(sum((T__Hold[,1]-T__Hold[,2])^2))/dT1_
+        dT<-sqrt((T__Hold[,1]-T__Hold[,2])^2)/dT1_
       } else if (dT1_<dT_1){
-        dT<-sqrt(sum((T__Hold[,1]-T__Hold[,2])^2))/dT_1
+        dT<-sqrt((T__Hold[,1]-T__Hold[,2])^2)/dT_1
       }
       PHold1<-data.frame(matrix(0,nrow=length(gl1),ncol=1))
       row.names(PHold1)<-gl1
@@ -757,6 +1310,7 @@ BetweenSimBootstrap<-function(filename1,filename2,combo,kmin=2,rel=TRUE,MVCorrec
       TRef<-row.names(T__Hold)
       for (m in 1:length(T11)){
         tanmathold[((j-1)*coln+l),TRef[m]]<-T11[m]
+        tanmatholdW[((j-1)*coln+l),TRef[m]]<-T11[m]/(T10+T01-sum(T11))
       }
       
       tan1[((j-1)*coln+l)]<-sum(T11)/(T10+T01-sum(T11))
@@ -766,7 +1320,7 @@ BetweenSimBootstrap<-function(filename1,filename2,combo,kmin=2,rel=TRUE,MVCorrec
   Output<-data.frame(matrix(c(jac1,tan1),nrow=nrow(combo)*coln,ncol=2))
   colnames(Output)<-c('Jaccard','Tanimoto')
 
-  FinalOut<-list("Summary"=Output,"RankInfo"=tanmathold,"Boot"=combo)
+  FinalOut<-list("Summary"=Output,"RankInfo"=tanmathold,"Boot"=combo,"RankInfoW"=tanmatholdW)
   return(FinalOut)
 }
 
@@ -774,18 +1328,147 @@ RankSimilarity<-function(RankInfo,PlotTitle){
   rInfo<-apply(RankInfo,1,order)
   cInfo<-colMeans(RankInfo)
   boxplot(RankInfo[,order(cInfo)],las=2,xlab='Ranking',ylim=c(0,1),ylab='Similarity Contribution',main=PlotTitle)
-  return(sort(cInfo))
+  return(list('RankOrder'=order(cInfo),'RankInfo'=RankInfo,'RankNames'=colnames(RankInfo)[order(cInfo)]))
 }
 
-RankComparison<-function(WithinRank1,WithinRank2,BetweenRank12,BetweenRank21){
+RelativeRank<-function(WithinRankObj,BetweenRankObj){
+  #ranking info used to scale
+  WR<-WithinRankObj$RankInfoFinal
+  BR<-BetweenRankObj$RankInfoFinal
+  WList<-colnames(WR)
+  BList<-colnames(BR)
+  Joint<-intersect(WList,BList)
+  RRank<-data.frame(matrix(0,nrow=dim(WR)[1],ncol=length(Joint)))
+  colnames(RRank)<-Joint
+  for (j in 1:length(Joint)){
+    idnm<-Joint[j]
+    RRank[,idnm]<-BR[,idnm]/WR[,idnm]
+  }
+  Sumry<-BetweenRankObj$Summary$Tanimoto/WithinRankObj$Summary$Tanimoto
+  Output<-list("RelRank"=RRank,"WNotInB"=WList[!WList %in% BList],"BNotInW"=BList[!BList %in% WList],"Summary"=Sumry)
+  return(Output)
+}
+
+RankAggregate<-function(WithinRank1,WithinRank2,BetweenRank12,BetweenRank21,RankMethod='Else'){
   #B12 is ranked mean RankInfo of file2 compared to distribution from file 1
   #B21 is ranked mean RankInfo of file1 compared to distribution from file 2
-  WN1<-colnames(WithinRank1)
-  WN2<-colnames(WithinRank2)
-  BN12<-colnames(BetweenRank12)
-  BN21<-colnames(BetweenRank21)
-  DF12<-data.frame(matrix(0,nrow=1,ncol=length(BN12)))
-  colnames(DF12)<-BN12
+  RR1_2Hold<-RelativeRank(WithinRank1,BetweenRank12)
+  RR1_2<-RR1_2Hold$RelRank
+  RR2_1Hold<-RelativeRank(WithinRank2,BetweenRank21)
+  RR2_1<-RR2_1Hold$RelRank
+  RRTotal<-data.frame(matrix(NA,nrow=max(c(dim(WithinRank1$Summary)[1],dim(WithinRank1$Summary)[2])),ncol=2))
+  colnames(RRTotal)<-c('R1_2','R2_1')
+  RRTotal$R1_2<-RR1_2Hold$Summary
+  RRTotal$R2_1<-RR2_1Hold$Summary
+  R1_2List<-colnames(RR1_2)
+  R2_1List<-colnames(RR2_1)
+  Joint<-intersect(R1_2List,R2_1List)
+  DFRank<-data.frame(matrix(0,nrow=2,ncol=length(Joint)))
+  MSimL<-rep(0,length(Joint))
+  SDSimL<-rep(0,length(Joint))
+  colnames(DFRank)<-Joint
+  rownames(DFRank)<-c('Mean','SD')
+  QRank<-data.frame(matrix(0,nrow=8,ncol=length(Joint)))
+  colnames(QRank)<-Joint
+  rownames(QRank)<-c('Lower12','Lower21','Upper12','Upper21','IndicatorL','IndicatorU','IndicatorInvRL','IndicatorInvRU')
+  
+  #similarity of the two means and the two variances
+  # multiply similarity by inverse of the means and the variances
+  if (RankMethod=='Log'){
+    lRR1_2<-log(RR1_2)
+    minlR12<-min(lRR1_2[!is.infinite(lRR1_2)])
+    lRR1_2[is.infinite(lRR1_2)]<-minlR12
+    lRR2_1<-log(RR2_1)
+    minlR21<-min(lRR2_1[!is.infinite(lRR2_1)])
+    lRR2_1[is.infinite(lRR2_1)]<-minlR21
+    for (j in 1:length(Joint)){
+      idnm<-Joint[j]
+      meanR12<-mean(lRR1_2[,idnm],na.rm=T)
+      sdR12<-sd(lRR1_2[,idnm],na.rm=T)
+      meanR21<-mean(lRR2_1[,idnm],na.rm=T)
+      sdR21<-sd(lRR2_1[,idnm],na.rm=T)
+      MeanSim<-meanR12*meanR21/(meanR12^2+meanR21^2-meanR12*meanR21)
+      MSimL[j]<-MeanSim
+      SDSim<-sdR12*sdR21/(sdR12^2+sdR21^2-sdR12*sdR21)
+      SDSimL[j]<-SDSim
+      DFRank[1,idnm]<-MeanSim*(1/mean(c(lRR1_2[,idnm],lRR2_1[,idnm]),na.rm=T)) #Sim*InvMean
+      DFRank[2,idnm]<-SDSim*(1/sd(c(lRR1_2[,idnm],lRR2_1[,idnm]),na.rm=T)) #Sim*InvSD
+      
+      AmeanR12<-mean(RR1_2[,idnm],na.rm=T)
+      AsdR12<-sd(RR1_2[,idnm],na.rm=T)
+      AmeanR21<-mean(RR2_1[,idnm],na.rm=T)
+      AsdR21<-sd(RR2_1[,idnm],na.rm=T)
+      err12<-qnorm(0.975)*AsdR12/sqrt(dim(RR1_2)[1]-sum(is.na(RR1_2[,idnm])))
+      err21<-qnorm(0.975)*AsdR21/sqrt(dim(RR2_1)[1]-sum(is.na(RR2_1[,idnm])))
+      QRank[1,idnm]<-AmeanR12-err12
+      QRank[2,idnm]<-AmeanR21-err21
+      QRank[3,idnm]<-AmeanR12+err12
+      QRank[4,idnm]<-AmeanR21+err21
+      QRank[5,idnm]<-(QRank[1,idnm]<1 && QRank[2,idnm]<1)
+      QRank[6,idnm]<-(QRank[3,idnm]<1 && QRank[4,idnm]<1)
+      QRank[7,idnm]<-(QRank[1,idnm]<mean(RRTotal$R1_2,na.rm=T)^-1 && QRank[2,idnm]<mean(RRTotal$R2_1,na.rm=T)^-1)
+      QRank[8,idnm]<-(QRank[3,idnm]<mean(RRTotal$R1_2,na.rm=T)^-1 && QRank[4,idnm]<mean(RRTotal$R2_1,na.rm=T)^-1)
+    }
+  } else if (RankMethod!='Log'){
+    for (j in 1:length(Joint)){
+      idnm<-Joint[j]
+      meanR12<-mean(RR1_2[,idnm],na.rm=T)
+      sdR12<-sd(RR1_2[,idnm],na.rm=T)
+      meanR21<-mean(RR2_1[,idnm],na.rm=T)
+      sdR21<-sd(RR2_1[,idnm],na.rm=T)
+      MeanSim<-meanR12*meanR21/(meanR12^2+meanR21^2-meanR12*meanR21)
+      MSimL[j]<-MeanSim
+      SDSim<-sdR12*sdR21/(sdR12^2+sdR21^2-sdR12*sdR21)
+      SDSimL[j]<-SDSim
+      DFRank[1,idnm]<-MeanSim*(1/mean(c(RR1_2[,idnm],RR2_1[,idnm]),na.rm=T)) #Sim*InvMean
+      DFRank[2,idnm]<-SDSim*(1/sd(c(RR1_2[,idnm],RR2_1[,idnm]),na.rm=T)) #Sim*InvSD
+      err12<-qnorm(0.975)*sdR12/sqrt(dim(RR1_2)[1]-sum(is.na(RR1_2[,idnm])))
+      err21<-qnorm(0.975)*sdR21/sqrt(dim(RR2_1)[1]-sum(is.na(RR2_1[,idnm])))
+      QRank[1,idnm]<-meanR12-err12
+      QRank[2,idnm]<-meanR21-err21
+      QRank[3,idnm]<-meanR12+err12
+      QRank[4,idnm]<-meanR21+err21
+      QRank[5,idnm]<-(QRank[1,idnm]<1 && QRank[2,idnm]<1)
+      QRank[6,idnm]<-(QRank[3,idnm]<1 && QRank[4,idnm]<1)
+      QRank[7,idnm]<-(QRank[1,idnm]<mean(RRTotal$R1_2,na.rm=T)^-1 && QRank[2,idnm]<mean(RRTotal$R2_1,na.rm=T)^-1)
+      QRank[8,idnm]<-(QRank[3,idnm]<mean(RRTotal$R1_2,na.rm=T)^-1 && QRank[4,idnm]<mean(RRTotal$R2_1,na.rm=T)^-1)
+      
+    }
+  }
+  
+  
+  
+  Output<-list('RankData'=DFRank,'QualityCheck'=QRank,'MeanSim'=MSimL,'SDSim'=SDSimL,'RankTotal'=RRTotal)
+  return(Output)
+  
+}
+
+RankListMaker<-function(WtihinRank1,WithinRank2,BetweenRank12,BetweenRank21){
+  #Take Aggregate Object and Produce list of IDs:
+  ## are too low quality
+  ## Ranking
+  ## 
+  
+  AggregateObj<-RankAggregate(WithinRank1,WithinRank2,BetweenRank12,BetweenRank21)
+  RRT12<-mean(AggregateObj$RankTotal[,1],na.rm = T)
+  RRT21<-mean(AggregateObj$RankTotal[,2],na.rm = T)
+  
+  if (mean(AggregateObj$RankTotal[,1],na.rm=T)>1 & mean(AggregateObj$RankTotal[,2],na.rm=T)>1){
+    print('Datasets 1 & 2 are both Below Overall Quality Threshold.')
+  } else if (mean(AggregateObj$RankTotal[,1],na.rm=T)>1 & mean(AggregateObj$RankTotal[,2],na.rm=T)<=1){
+    print('Dataset 2 is Below Quality Threshold; Dataset 1 may be a subset of the more broadly defined Dataset 2.')
+  } else if (mean(AggregateObj$RankTotal[,1],na.rm=T)<=1 & mean(AggregateObj$RankTotal[,2],na.rm=T)>1){
+    print('Dataset 1 is Below Quality Threshold; Dataset 2 may be a subset of the more broadly defined Dataset 1.')
+  } else {
+    print('Datasets 1 & 2 are both Above Overall Quality Threshold.')
+    NumIDs<-dim(AggregateObj$QualityCheck)[2]
+    LBound12<-AggregateObj$QualityCheck['Lower12',]<RRT12
+    LBound21<-AggregateObj$QualityCheck['Lower21',]<RRT21
+    for (j in 1:NumIDs){
+      
+    }
+  }
+  
   
 }
 
@@ -880,12 +1563,12 @@ MVAbun<-function(filename,AbunTitle,kmin=1,rel=TRUE){
 AdvancedSimPlot<-function(filename1,filename2,kmin=2,simtype="Tanimoto",PlotTitle,GName1,GName2,rel=TRUE,mn=FALSE,gg=FALSE,gg2=FALSE){
   #Change Within Sim to give all values, not just mean and sd
   #change Between to boot strap comparisons
-  library(ggplot2)
+  #library(ggplot2)
   if (simtype=='Tanimoto'){
-    WithinM1<-WithinSimBootstrap1(filename1,kmin,rel=rel,mn=mn)
-    WithinM2<-WithinSimBootstrap1(filename2,kmin,rel=rel,mn=mn)
-    Between1<-BetweenSimBootstrap(filename1,filename2,WithinM1$Boot,kmin,rel,mn=mn)$Summary[,2]
-    Between2<-BetweenSimBootstrap(filename2,filename1,WithinM2$Boot,kmin,rel,mn=mn)$Summary[,2]
+    WithinM1<-WithinSimBootstrap2(filename1,kmin,rel=rel,mn=mn)
+    WithinM2<-WithinSimBootstrap2(filename2,kmin,rel=rel,mn=mn)
+    Between1<-BetweenSimBootstrap2(filename1,filename2,WithinM1$Boot,kmin,rel,mn=mn)$Summary[,2]
+    Between2<-BetweenSimBootstrap2(filename2,filename1,WithinM2$Boot,kmin,rel,mn=mn)$Summary[,2]
   } else if (simtype=='Jaccard'){
     WithinM1<-WithinSim(filename1,kmin,rel)[,1]
     WithinM2<-WithinSim(filename2,kmin,rel)[,1]
@@ -910,22 +1593,22 @@ AdvancedSimPlot<-function(filename1,filename2,kmin=2,simtype="Tanimoto",PlotTitl
     b2s<-0
   }
   
-  if (gg){
-    if (gg2){
-      dframe<-data.frame(c(d1,d2,Between1,Between2),c(rep(GName1,length(d1)),rep(GName2,length(d2)),rep(paste(GName2,'in',GName1),length(Between1)),rep(paste(GName1,'in',GName2),length(Between2))))
-      colnames(dframe)<-c('Similarity','Distribution')
-      
-    } else {
-      dframe<-data.frame(c(d1,d2),c(rep(GName1,length(d1)),rep(GName2,length(d2))))
-      colnames(dframe)<-c('Similarity','Distribution')
-      
-    }
-    p<-ggplot(dframe,aes(x=Distribution,y=Similarity,color=Distribution))+geom_violin(trim=FALSE)
-    p+stat_summary(fun.y=mean,geom="point",shape=23,size=2)
-    #p+theme_bw() + theme(panel.border = element_blank(), panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))
-    
-    
-  } else {
+  # if (gg){
+  #   if (gg2){
+  #     dframe<-data.frame(c(d1,d2,Between1,Between2),c(rep(GName1,length(d1)),rep(GName2,length(d2)),rep(paste(GName2,'in',GName1),length(Between1)),rep(paste(GName1,'in',GName2),length(Between2))))
+  #     colnames(dframe)<-c('Similarity','Distribution')
+  #     
+  #   } else {
+  #     dframe<-data.frame(c(d1,d2),c(rep(GName1,length(d1)),rep(GName2,length(d2))))
+  #     colnames(dframe)<-c('Similarity','Distribution')
+  #     
+  #   }
+  #   p<-ggplot(dframe,aes(x=Distribution,y=Similarity,color=Distribution))+geom_violin(trim=FALSE)
+  #   p+stat_summary(fun.y=mean,geom="point",shape=23,size=2)
+  #   #p+theme_bw() + theme(panel.border = element_blank(), panel.grid.major = element_blank(),panel.grid.minor = element_blank(), axis.line = element_line(colour = "black"))
+  #   
+  #   
+  # } else {
     boxplot(d1,d2,ylim=c(0,1),col=3,main=PlotTitle,names=c(GName1,GName2),xlab='Samples',ylab='Similarity Ratio',outline=FALSE)
     abline(h=b1,col=2,lty=5,lwd=2)
     if (b1>.1){
@@ -943,8 +1626,48 @@ AdvancedSimPlot<-function(filename1,filename2,kmin=2,simtype="Tanimoto",PlotTitl
     
     text(1,1,labels=paste('N=',length(SimDataClean(filename1,kmin=kmin,rel=rel)[1,]),', G=',length(SimDataClean(filename1,kmin=kmin,rel=rel)[,1]),':',format(round(mean(d1),3),nsmall=3),'+-',format(round(sd(d1),3),nsmall=3)[1]))
     text(2,1,labels=paste('N=',length(SimDataClean(filename2,kmin=kmin,rel=rel)[1,]),', G=',length(SimDataClean(filename2,kmin=kmin,rel=rel)[,1]),':',format(round(mean(d2),3),nsmall=3),'+-',format(round(sd(d2),3),nsmall=3)[1]))
+  #}
+    OutObject<-list("Internal1"=d1,"Internal2"=d2,"External12"=Between1,"External21"=Between2)
+    return(OutObject)
+  
+}
+
+AdvancedSimPlot2<-function(filename1,filename2,kmin=2,simtype="Tanimoto",PlotTitle,GName1,GName2,rel=TRUE,mn=FALSE,gg=FALSE,gg2=FALSE){
+  #Change Within Sim to give all values, not just mean and sd
+  #change Between to boot strap comparisons
+  #library(ggplot2)
+  if (simtype=='Tanimoto'){
+    WithinM1<-WithinSimBootstrap2(filename1,kmin,rel=rel,mn=mn)
+    WithinM2<-WithinSimBootstrap2(filename2,kmin,rel=rel,mn=mn)
+    Between12<-BetweenSimBootstrap2(filename1,filename2,WithinM1$Boot,kmin,rel,mn=mn)
+    Between21<-BetweenSimBootstrap2(filename2,filename1,WithinM2$Boot,kmin,rel,mn=mn)
+  } else if (simtype=='Jaccard'){
+    WithinM1<-WithinSim(filename1,kmin,rel)[,1]
+    WithinM2<-WithinSim(filename2,kmin,rel)[,1]
+    Between<-BetweenSim(filename1,filename2,kmin,rel)[1]
+  } else {
+    print('simtype must equal Jaccard or Tanimoto')
   }
-    
+  
+  d1<-WithinM1$Summary$Tanimoto
+  d2<-WithinM2$Summary$Tanimoto
+  b12<-Between12$Summary$Tanimoto
+  b21<-Between21$Summary$Tanimoto
+  
+  par(mfrow=c(1,2))
+
+  boxplot(d1,b12,ylim=c(0,1),col=c(3,2),main=paste0(PlotTitle,': ',GName2,' in ',GName1),names=c(GName1,GName2),xlab=paste('Replicates Compared to',GName1,'Distribution'),ylab='Similarity Ratio',outline=FALSE)
+  
+  text(1,1,labels=paste('N=',length(SimDataClean(filename1,kmin=kmin,rel=rel)[1,]),', G=',length(SimDataClean(filename1,kmin=kmin,rel=rel)[,1]),':',format(round(mean(d1),3),nsmall=3),'+-',format(round(sd(d1),3),nsmall=3)[1]))
+  text(2,1,labels=paste('N=',length(SimDataClean(filename2,kmin=kmin,rel=rel)[1,]),', G=',length(SimDataClean(filename2,kmin=kmin,rel=rel)[,1]),':',format(round(mean(b12),3),nsmall=3),'+-',format(round(sd(b12),3),nsmall=3)[1]))
+  
+  boxplot(d2,b21,ylim=c(0,1),col=c(3,2),main=paste(PlotTitle,': ',GName1,' in ',GName2),names=c(GName2,GName1),xlab=paste('Replicates Compared to',GName2,'Distribution'),ylab='Similarity Ratio',outline=FALSE)
+  
+  text(1,1,labels=paste('N=',length(SimDataClean(filename2,kmin=kmin,rel=rel)[1,]),', G=',length(SimDataClean(filename2,kmin=kmin,rel=rel)[,1]),':',format(round(mean(d2),3),nsmall=3),'+-',format(round(sd(d2),3),nsmall=3)[1]))
+  text(2,1,labels=paste('N=',length(SimDataClean(filename1,kmin=kmin,rel=rel)[1,]),', G=',length(SimDataClean(filename1,kmin=kmin,rel=rel)[,1]),':',format(round(mean(b21),3),nsmall=3),'+-',format(round(sd(b21),3),nsmall=3)[1]))
+  par(mfrow=c(1,1))
+  OutObject<-list("Internal1"=WithinM1,"Internal2"=WithinM2,"External12"=Between12,"External21"=Between21)
+  return(OutObject)
   
 }
 
@@ -966,6 +1689,7 @@ PeptideSegment<-function(filename1,filename2,kmin=2,simtype="Tanimoto",rel=TRUE,
   for (j in seq(length(UniCle2))){
     NameVec2[which(Cleaned2 %in% UniCle2[j])]<-j
   }
+  Output<-list()
   failvec1<-c()
   failvec2<-c()
   if (length(UniCle2)>=length(UniCle1)){
@@ -974,7 +1698,9 @@ PeptideSegment<-function(filename1,filename2,kmin=2,simtype="Tanimoto",rel=TRUE,
         k<-which(UniCle1 %in% UniCle2[j])
         temp1<-datfile1[which(NameVec1==k),]
         temp2<-datfile2[which(NameVec2==j),]
-        AdvancedSimPlot(temp1,temp2,kmin=1,simtype = simtype,paste0(OverallName,': ',UniCle2[j]),SampleName1,SampleName2)
+        
+        Out<-AdvancedSimPlot2(temp1,temp2,kmin=1,simtype = simtype,paste0(OverallName,': ',UniCle2[j]),SampleName1,SampleName2)
+        append(Output,list(paste0(UniCle2[j]),Out))
         failvec1<-c(failvec1,k)
       } else {
         failvec2<-c(failvec2,j)
@@ -998,7 +1724,8 @@ PeptideSegment<-function(filename1,filename2,kmin=2,simtype="Tanimoto",rel=TRUE,
         k<-which(UniCle2 %in% UniCle1[j])
         temp1<-datfile1[which(NameVec1==j),]
         temp2<-datfile2[which(NameVec2==k),]
-        AdvancedSimPlot(temp1,temp2,kmin=1,simtype = simtype,paste0(OverallName,': ',UniCle1[j]),SampleName1,SampleName2)
+        Out<-AdvancedSimPlot2(temp1,temp2,kmin=1,simtype = simtype,paste0(OverallName,': ',UniCle1[j]),SampleName1,SampleName2)
+        append(Output,list(paste0(UniCle1[j]),Out))
         failvec2<-c(failvec2,k)
       } else {
         failvec1<-c(failvec1,j)
@@ -1015,6 +1742,7 @@ PeptideSegment<-function(filename1,filename2,kmin=2,simtype="Tanimoto",rel=TRUE,
       print(paste(filename1,'had the following unmatched peptide backbones',sep=' '))
     }
   }
+  return(Output)
   
   
 }
