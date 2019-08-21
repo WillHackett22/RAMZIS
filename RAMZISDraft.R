@@ -1022,33 +1022,42 @@ InternalSimilarity<-function(filename,BootSet,kmin=2,rel=TRUE,MVCorrection=TRUE,
 }
 
 #plots internal boot object[[]]: 1 is the first
-InternalQuality<-function(filename,BootSet,SimObj,PlotTitle,kmin=2,rel=TRUE,MVCorrection=TRUE,mn=FALSE){
+InternalQuality<-function(filename,BootSet,SimObj,PlotTitle,kmin=2,rel=TRUE,MVCorrection=TRUE,mn=FALSE,verbose=FALSE,legendpos='topleft'){
   Int<-InternalSimilarity(filename,BootSet,kmin,rel,MVCorrection,mn)
-  h1<-hist(SimObj$NullOut$NullTani,xlim=c(0,1),col=rgb(0,0,1,0.5),main=PlotTitle,xlab='Similarity',ylab='Observations')
-  h2<-hist(SimObj$Summary$Tanimoto,add=T,col=rgb(1,0,0,0.5))
-  h3<-hist(Int$InternalTanimoto,add=T,col=rgb(0,1,0,0.5))
+  h1<-hist(SimObj$NullOut$NullTani,plot=F)
+  h2<-hist(SimObj$Summary$Tanimoto,plot=F)
+  h3<-hist(Int$InternalTanimoto,plot=F)
+  mh<-max(c(h1$density,h2$density,h3$density))
+  h1<-hist(SimObj$NullOut$NullTani,xlim=c(0,1),ylim=c(0,mh),col=rgb(0,0,1,0.5),main=PlotTitle,xlab='Similarity',ylab='Observations',freq=F)
+  h2<-hist(SimObj$Summary$Tanimoto,add=T,col=rgb(1,0,0,0.5),freq=F)
+  h3<-hist(Int$InternalTanimoto,add=T,col=rgb(0,1,0,0.5),freq=F)
   TAct<-SimObj$Actual
-  lines(rep(TAct,2),c(0,max(h1$counts)),col=1,lwd=3)
-  legend(0,max(h1$counts)/2,legend=c('Actual','Internal','Test','Null'),fill=c(1,3,2,4))
+  lines(rep(TAct,2),c(0,mh),col=1,lwd=3)
+  legend(legendpos,legend=c('Actual','Internal','Test','Null'),fill=c(1,3,2,4))
+  if (verbose==T){
+    return(Int)
+  }
+    
+  
 }
 
 #plots observed, test, null
-SimPlot<-function(PlotTitle,SimilarityObj,f=F){
+SimPlot<-function(PlotTitle,SimilarityObj,f=F,legendpos='topleft'){
   TDis<-SimilarityObj$Summary$Tanimoto
   NDis<-SimilarityObj$NullOut$NullTani
   TAct<-SimilarityObj$Actual
-  h1<-hist(NDis,xlim=c(0,1),col=rgb(0,0,1,0.5),main=PlotTitle,xlab='Similarity',ylab='Observations',freq=f)
-  h2<-hist(TDis,add=T,col=rgb(1,0,0,0.5),freq=f)
+  h1<-hist(NDis,plot=F)
+  h2<-hist(TDis,plot=F)
   mh<-max(c(h1$density,h2$density))
   h1<-hist(NDis,xlim=c(0,1),ylim=c(0,mh),col=rgb(0,0,1,0.5),main=PlotTitle,xlab='Similarity',ylab='Observations',freq=f)
   h2<-hist(TDis,add=T,col=rgb(1,0,0,0.5),freq=f)
   lines(rep(TAct,2),c(0,mh),col=1,lwd=3)
-  legend('topright',legend=c('Observed','Test','Null'),fill=c(1,2,4))
+  legend(legendpos,legend=c('Observed','Test','Null'),fill=c(1,2,4))
 }
 
 SimPlotFromFile<-function(PlotTitle,filename1,filename2,kmin=2,rel=TRUE,MVCorrection=TRUE,mn=FALSE,bootie=TRUE){
   SimObj<-SymmetricalSimBootstrap(filename1,filename2,kmin,rel,MVCorrection,mn,bootie)
-  SimPlot(SimObj)
+  SimPlot(PlotTitle,SimObj)
   return(SimObj)
 }
 
