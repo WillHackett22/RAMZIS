@@ -16,31 +16,7 @@
 ##Expected input cont: The first column should be the glycopeptide, all others are signal columns from different samples
 #
 #RAMZIS Function Structure
-#RAMZIS
-#  df1=GlycReRead(FileList1,NormVector1) #load files from list 1 and format
-#  df2=GlycReRead(FileList2,NormVector2) #load files from list 2 and format
-#  #Comparative Similarity By Group
-#  PeptideSegment(df1,df2,kmin,simtype,rel,OverallName,SampleName1,SampleName2)
-#    LoopThroughUniquePeptideBackbones:
-#      WithinS1=WithinSim(Subset(df1),kmin)
-#        BetweenSim(sample(Subset(df1)),sample(Subset(df1)),kmin) 
-#      WithinS2=WithinSim(Subset(df2),kmin)
-#        BetweenSim(sample(Subset(df2)),sample(Subset(df2)),kmin)
-#      Between12=BetweenSim(Subset(df1),Subset(df2),kmin)
-#      Simplot(WithinS1,WithinS2,Between12) #outputs plot of comparative similarity
-#        Boxplot(WithinS1,WithinS2,main=paste(OverallName,Backbone),names=c(SampleName1,SampleName2))
-#		 Abline(Between12)
-#        Labeling
-#      EndPlot
-#      RAMZISPeptideBackbone(WithinS1,WithinS2,Between12) #outputs three ranking lists
-#      Storage<-WithinS1,WithinS2,Between12
-#	   StoragePBLists<-RAMZISPBLists
-#    EndLoop
-#  RAMZISProtein(StoragePBListsW1,StoragePBListsW2,StoragePBListsB)
-#  StoragePrLists<-RAMZISPrLists
-#  RAMZISProteome(StoragePrListsW1,StoragePrListsW2,StoragePrListsB)
-#  StoragePmLists<-RAMZISPmLists
-#  Output: StoragePBLists, StoragePrLists, StoragePmLists
+#
 #
 #Functions and Dependencies:
 #WithinSim
@@ -196,7 +172,7 @@ TheoreticalDataGenerator<-function(n,g,p,w,alp=2,bet=2,maxim=TRUE,w0=2){
   #n samples
   #g identifications
   #p average presence
-  ##p determines the presence distribution that appears across the sample
+  ## p determines the presence distribution that appears across the sample
   ## binomial distribution rate of observation is proportional to signal intensity
   ## eg P(1,n,p_adj)=#observations. p_adj=p*exp(x-mean(x))
   #w term controlling the variance in the data
@@ -1052,15 +1028,18 @@ InternalQuality<-function(filename,BootSet,SimObj,PlotTitle,kmin=2,rel=TRUE,MVCo
 }
 
 #plots observed, test, null
-SimPlot<-function(PlotTitle,SimilarityObj,f=F,legendpos='topleft'){
+
+SimPlot<-function(PlotTitle,SimilarityObj,legendpos='topleft'){
   TDis<-SimilarityObj$Summary$Tanimoto
+  dT<-density(TDis)
   NDis<-SimilarityObj$NullOut$NullTani
+  dN<-density(NDis)
   TAct<-SimilarityObj$Actual
-  h1<-hist(NDis,plot=F)
-  h2<-hist(TDis,plot=F)
-  mh<-max(c(h1$density,h2$density))
-  h1<-hist(NDis,xlim=c(0,1),ylim=c(0,mh),col=rgb(0,0,1,0.5),main=PlotTitle,xlab='Similarity',ylab='Observations',freq=f)
-  h2<-hist(TDis,add=T,col=rgb(1,0,0,0.5),freq=f)
+  mh<-max(c(dT$y/dT$n,dN$y/dN$n))
+  plot(dT$x,dT$y/dT$n,xlim=c(0,1),ylim=c(0,mh),main=PlotTitle,type='l')
+  polygon(dT$x,dT$y/dT$n,col=rgb(1,0,0,0.5))
+  lines(dN$x,dN$y/dN$n)
+  polygon(dN$x,dN$y/dN$n,col=rgb(0,0,1,0.5))
   lines(rep(TAct,2),c(0,mh),col=1,lwd=3)
   legend(legendpos,legend=c('Observed','Comparative','Joint Reference'),fill=c(1,2,4))
 }
@@ -1152,7 +1131,7 @@ ContributionCheckInternal<-function(SimObj,IntA,IntB){
 
 ContributionCheckComp<-function(SimObj,ExclusionList='Default'){
   IdentList<-colnames(SimObj$RankInfoActual)
-  if (ExclusionList!='Default'){
+  if (ExclusionList[1]!='Default'){
     for (j in 1:length(ExclusionList)){
       IdentList<-IdentList[-which(IdentList==ExclusionList[j])]
     }
@@ -1172,7 +1151,7 @@ ContributionCheckComp<-function(SimObj,ExclusionList='Default'){
 
 ContributionCheckJoint<-function(SimObj,ExclusionList='Default'){
   IdentList<-colnames(SimObj$RankInfoActual)
-  if (ExclusionList!='Default'){
+  if (ExclusionList[1]!='Default'){
     for (j in 1:length(ExclusionList)){
       IdentList<-IdentList[-which(IdentList==ExclusionList[j])]
     }
@@ -1181,6 +1160,7 @@ ContributionCheckJoint<-function(SimObj,ExclusionList='Default'){
   colnames(JointCheck)<-c('Both','LQuartile','Separation')
   for (j in 1:length(IdentList)){
     l<-IdentList[j]
+    vic<-which(SimObj$NullRankInfoFinal[l,]==0)
     JointCheck[l,2]<-(ecdf(SimObj$NullRankInfoFinal[l,])(SimObj$RankInfoActual[l])<=0.25)
     
     JointCheck[l,3]<-(ks.test(SimObj$RankingInfoFinal[l,],SimObj$NullRankInfoFinal[l,],alternative='g')<=0.05)
