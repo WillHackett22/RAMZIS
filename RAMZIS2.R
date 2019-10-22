@@ -1055,8 +1055,8 @@ SimPlot<-function(PlotTitle,SimilarityObj,legendpos='topleft'){
   if (is.na(JointH$y)){
     JointH$y<-0
   }
-  #text(TAct,CompH$y,labels = paste0(round(k*CompPerc,2),'%'),pos=4)
-  #text(TAct,JointH$y,labels = paste0(round(k*JointPerc,2),'%'),pos=2)
+  text(TAct,CompH$y,labels = paste0(round(k*CompPerc,2),'%'),pos=4)
+  text(TAct,JointH$y,labels = paste0(round(k*JointPerc,2),'%'),pos=2)
   #coverage overlap
   df <- merge(
     as.data.frame(dN[c("x", "y")]),
