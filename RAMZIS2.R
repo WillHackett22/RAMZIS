@@ -1030,18 +1030,54 @@ InternalQuality<-function(filename,BootSet,SimObj,PlotTitle,kmin=2,rel=TRUE,MVCo
 #plots observed, test, null
 
 SimPlot<-function(PlotTitle,SimilarityObj,legendpos='topleft'){
+  k<-100
+  #build density
   TDis<-SimilarityObj$Summary$Tanimoto
-  dT<-density(TDis)
+  dT<-density(TDis,from=0,to=1.05)
   NDis<-SimilarityObj$NullOut$NullTani
-  dN<-density(NDis)
+  dN<-density(NDis,from=0,to=1.05)
   TAct<-SimilarityObj$Actual
-  mh<-max(c(dT$y/dT$n,dN$y/dN$n))
-  plot(dT$x,dT$y/dT$n,xlim=c(0,1),ylim=c(0,mh),main=PlotTitle,type='l')
-  polygon(dT$x,dT$y/dT$n,col=rgb(1,0,0,0.5))
-  lines(dN$x,dN$y/dN$n)
-  polygon(dN$x,dN$y/dN$n,col=rgb(0,0,1,0.5))
-  lines(rep(TAct,2),c(0,mh),col=1,lwd=3)
-  legend(legendpos,legend=c('Observed','Comparative','Joint Reference'),fill=c(1,2,4))
+  #plot densities
+  mh<-max(c(k*dT$y/sum(dT$y),k*dN$y/sum(dN$y)))
+  plot(dT$x,k*dT$y/sum(dT$y),xlim=c(0,1),ylim=c(0,mh),main=PlotTitle,type='l',xlab='Similarity',ylab='% of Distribution')
+  polygon(dT$x,k*dT$y/sum(dT$y),col=rgb(1,0,0,0.5))
+  lines(dN$x,k*dN$y/sum(dN$y))
+  polygon(dN$x,k*dN$y/sum(dN$y),col=rgb(0,0,1,0.5))
+  lines(rep(TAct,2),c(0,100),col=1,lwd=3)
+  #percentile location
+  CompPerc<-ecdf(TDis)(TAct)
+  JointPerc<-ecdf(NDis)(TAct)
+  CompH<-approx(dT$x,k*dT$y/sum(dT$y),TAct)
+  JointH<-approx(dN$x,k*dN$y/sum(dN$y),TAct)
+  if (is.na(CompH$y)){
+    CompH$y<-0
+  }
+  if (is.na(JointH$y)){
+    JointH$y<-0
+  }
+  #text(TAct,CompH$y,labels = paste0(round(k*CompPerc,2),'%'),pos=4)
+  #text(TAct,JointH$y,labels = paste0(round(k*JointPerc,2),'%'),pos=2)
+  #coverage overlap
+  df <- merge(
+    as.data.frame(dN[c("x", "y")]),
+    as.data.frame(dT[c("x", "y")]),
+    by = "x", suffixes = c(".T", ".N")
+  )
+  df$comp <- as.numeric(df$y.T > df$y.N)
+  df$cross <- c(NA, diff(df$comp))
+  CPoint<-which(df$cross!=0)[which(max(df$y.T[which(df$cross!=0)])==df$y.T[which(df$cross!=0)])]
+  XPoint<-df$x[CPoint]
+  if (df$y.T[CPoint]<(10^-10)){
+    Overlap<-0
+  } else {
+    TArea<-k*(1-ecdf(TDis)(XPoint))
+    NArea<-k*ecdf(NDis)(XPoint)
+    Overlap<-round(TArea+NArea,2)
+  }
+  
+  legend(legendpos,legend=c('Observed Similarity','Test Distribution','Null Distribution',paste0(Overlap,'% Overlap of Distributions')),fill=c(1,2,4,rgb(1,0,1)))
+  
+  
 }
 
 SimPlotFromFile<-function(PlotTitle,filename1,filename2,kmin=2,rel=TRUE,MVCorrection=TRUE,mn=FALSE,bootie=TRUE){
