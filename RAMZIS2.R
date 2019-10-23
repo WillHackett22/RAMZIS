@@ -55,6 +55,10 @@ GlycReRead<-function(Filelist,NormVector){
   }
 }
 
+GlyLineRead<-function(Filelist){
+  
+}
+
 #SimDataClean
 SimDataClean<-function(filename,kmin=2,rel=TRUE,normvector='Default'){
   #Read in Data and measure dataframe size
@@ -702,18 +706,25 @@ SymmetricalSimBootstrap<-function(filename1,filename2,kmin=2,rel=TRUE,MVCorrecti
       }
       combot1<-combot[1:floor(dim(combot)[1]/2),]
       combot2<-combot[(floor(dim(combot)[1]/2)+1):dim(combot)[1],]
-    } 
+      row.names(combot2)<-NULL    
+      } 
   } else {
     combot<-'Error'
   }
   #remove all of one side
-  if (sum(rowSums(combot1<=coln1)==coln1)>0){
-    combot1<-combot1[-which(rowSums(combot1<=coln1)==coln1),]
-    combot1<-combot1[-which(rowSums(combot1>coln1)==coln1),]
+  if (sum(rowSums(combot1<=coln1)==coln1)>0 | sum(rowSums(combot1>coln1)==coln1)>0){
+    if (sum(rowSums(combot1<=coln1)==coln1)>0){
+      combot1<-combot1[-which(rowSums(combot1<=coln1)==coln1),]
+    } else {
+      combot1<-combot1[-which(rowSums(combot1>coln1)==coln1),]
+    }
   }
   if (sum(rowSums(combot2>coln1)==coln2)>0 | sum(rowSums(combot2<=coln1)==coln2)>0){
-    combot2<-combot2[-which(rowSums(combot2<=coln1)==coln2),]
-    combot2<-combot2[-which(rowSums(combot2>coln1)==coln2),]
+    if (sum(rowSums(combot2<=coln1)==coln2)>0){
+      combot2<-combot2[-which(rowSums(combot2<=coln1)==coln2),]
+    } else {
+      combot2<-combot2[-which(rowSums(combot2>coln1)==coln2),]
+    }
   }
   
   jacN<-rep(0,nrow(combot1)*nrow(combot2)) # jaccard holder depricated
@@ -1033,9 +1044,9 @@ SimPlot<-function(PlotTitle,SimilarityObj,legendpos='topleft'){
   k<-100
   #build density
   TDis<-SimilarityObj$Summary$Tanimoto
-  dT<-density(TDis,from=0,to=1.05)
+  dT<-density(TDis,from=-0.05,to=1.05)
   NDis<-SimilarityObj$NullOut$NullTani
-  dN<-density(NDis,from=0,to=1.05)
+  dN<-density(NDis,from=-0.05,to=1.05)
   TAct<-SimilarityObj$Actual
   #plot densities
   mh<-max(c(k*dT$y/sum(dT$y),k*dN$y/sum(dN$y)))
@@ -1055,8 +1066,8 @@ SimPlot<-function(PlotTitle,SimilarityObj,legendpos='topleft'){
   if (is.na(JointH$y)){
     JointH$y<-0
   }
-  text(TAct,CompH$y,labels = paste0(round(k*CompPerc,2),'%'),pos=4)
-  text(TAct,JointH$y,labels = paste0(round(k*JointPerc,2),'%'),pos=2)
+  text(TAct,CompH$y,labels = paste0(round(k*CompPerc,2),'% of Test'),pos=4)
+  text(TAct,JointH$y,labels = paste0(round(k*JointPerc,2),'% of Null'),pos=2)
   #coverage overlap
   df <- merge(
     as.data.frame(dN[c("x", "y")]),
@@ -1085,6 +1096,7 @@ SimPlotFromFile<-function(PlotTitle,filename1,filename2,kmin=2,rel=TRUE,MVCorrec
   SimPlot(PlotTitle,SimObj)
   return(SimObj)
 }
+
 
 
 
