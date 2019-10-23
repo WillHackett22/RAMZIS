@@ -55,9 +55,7 @@ GlycReRead<-function(Filelist,NormVector){
   }
 }
 
-GlyLineRead<-function(Filelist){
-  
-}
+GlyLineRead<-function(Filelist){}
 
 #SimDataClean
 SimDataClean<-function(filename,kmin=2,rel=TRUE,normvector='Default'){
@@ -1049,9 +1047,15 @@ SimPlot<-function(PlotTitle,SimilarityObj,legendpos='topleft'){
   dN<-density(NDis,from=-0.05,to=1.05)
   TAct<-SimilarityObj$Actual
   #plot densities
-  mh<-max(c(k*dT$y/sum(dT$y),k*dN$y/sum(dN$y)))
-  plot(dT$x,k*dT$y/sum(dT$y),xlim=c(0,1),ylim=c(0,mh),main=PlotTitle,type='l',xlab='Similarity',ylab='% of Distribution')
-  polygon(dT$x,k*dT$y/sum(dT$y),col=rgb(1,0,0,0.5))
+  if (max(TDis)==0){
+    mh<-max(c(k*dN$y/sum(dN$y)))
+    plot(c(0,0,0.1,0.1),c(0,mh,mh,0),xlim=c(0,1),ylim=c(0,mh),main=PlotTitle,type='l',xlab='Similarity',ylab='% of Distribution')
+    polygon(c(0,0,0.1,0.1),c(0,mh,mh,0),col=rgb(1,0,0,0.5))
+  } else {
+    mh<-max(c(k*dT$y/sum(dT$y),k*dN$y/sum(dN$y)))
+    plot(dT$x,k*dT$y/sum(dT$y),xlim=c(0,1),ylim=c(0,mh),main=PlotTitle,type='l',xlab='Similarity',ylab='% of Distribution')
+    polygon(dT$x,k*dT$y/sum(dT$y),col=rgb(1,0,0,0.5))
+  }
   lines(dN$x,k*dN$y/sum(dN$y))
   polygon(dN$x,k*dN$y/sum(dN$y),col=rgb(0,0,1,0.5))
   lines(rep(TAct,2),c(0,100),col=1,lwd=3)
