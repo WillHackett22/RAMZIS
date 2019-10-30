@@ -1017,34 +1017,84 @@ InternalSimilarity<-function(filename,BootSet,kmin=1,rel=TRUE,MVCorrection=TRUE,
 }
 
 #plots internal boot object[[]]: 1 is the first
-InternalQuality<-function(filename,BootSet,SimObj,PlotTitle,kmin=2,rel=TRUE,MVCorrection=TRUE,mn=FALSE,verbose=FALSE,legendpos='topleft'){
-  Int<-InternalSimilarity(filename,BootSet,kmin,rel,MVCorrection,mn)
-  h1<-hist(SimObj$NullOut$NullTani,plot=F)
-  h2<-hist(SimObj$Summary$Tanimoto,plot=F)
-  h3<-hist(Int$InternalTanimoto,plot=F)
-  mh<-max(c(h1$density,h2$density,h3$density))
-  h1<-hist(SimObj$NullOut$NullTani,xlim=c(0,1),ylim=c(0,mh),col=rgb(0,0,1,0.5),main=PlotTitle,xlab='Similarity',ylab='Observations',freq=F)
-  h2<-hist(SimObj$Summary$Tanimoto,add=T,col=rgb(1,0,0,0.5),freq=F)
-  h3<-hist(Int$InternalTanimoto,add=T,col=rgb(0,1,0,0.5),freq=F)
-  TAct<-SimObj$Actual
-  lines(rep(TAct,2),c(0,mh),col=1,lwd=3)
-  legend(legendpos,legend=c('Actual','Internal','Test','Null'),fill=c(1,3,2,4))
-  if (verbose==T){
-    return(Int)
+InternalQuality<-function(filename,BootSet,SimObj,PlotTitle,GroupName,Int=NULL,kmin=2,rel=TRUE,MVCorrection=TRUE,mn=FALSE,verbose=FALSE,legendpos='topleft'){
+  if (!is.null(Int)){
+    #Use Int as Int object
+  } else {
+    Int<-InternalSimilarity(filename,BootSet,kmin,rel,MVCorrection,mn)
   }
-    
+  
+  k<-100
+  #build density
+  TDis<-SimilarityObj$Summary$Tanimoto
+  dT<-density(TDis,from=-0.05,to=1.05,na.rm=T)
+  NDis<-SimilarityObj$NullOut$NullTani
+  dN<-density(NDis,from=-0.05,to=1.05,na.rm=T)
+  IDis<-Int$InternalTanimoto
+  dI<-density(IDis,from=-0.05,to=1.05,na.rm=T)
+  TAct<-SimilarityObj$Actual
+  #plot densities
+  if (max(TDis)==0){
+    mh<-max(c(k*dN$y/sum(dN$y)))
+    plot(c(0,0,0.1,0.1),c(0,mh,mh,0),xlim=c(0,1),ylim=c(0,mh),main=PlotTitle,type='l',xlab='Similarity',ylab='% of Distribution')
+    polygon(c(0,0,0.1,0.1),c(0,mh,mh,0),col=rgb(1,0,0,0.5))
+  } else {
+    mh<-max(c(k*dT$y/sum(dT$y),k*dN$y/sum(dN$y)))
+    plot(dT$x,k*dT$y/sum(dT$y),xlim=c(0,1),ylim=c(0,mh),main=PlotTitle,type='l',xlab='Similarity',ylab='% of Distribution')
+    polygon(dT$x,k*dT$y/sum(dT$y),col=rgb(1,0,0,0.5))
+  }
+  lines(dN$x,k*dN$y/sum(dN$y))
+  polygon(dN$x,k*dN$y/sum(dN$y),col=rgb(0,0,1,0.5))
+  lines(dI$x,k*dI$y/sum(dI$y))
+  polygon(dI$x,k*dI$y/sum(dI$y),col=rgb(0,1,0,0.5))
+  lines(rep(TAct,2),c(0,100),col=1,lwd=3)
+  #percentile location
+  CompPerc<-ecdf(TDis)(TAct)
+  JointPerc<-ecdf(NDis)(TAct)
+  CompH<-approx(dT$x,k*dT$y/sum(dT$y),TAct)
+  JointH<-approx(dN$x,k*dN$y/sum(dN$y),TAct)
+  if (is.na(CompH$y)){
+    CompH$y<-0
+  }
+  if (is.na(JointH$y)){
+    JointH$y<-0
+  }
+  text(TAct,CompH$y,labels = paste0(round(k*CompPerc,2),'% of Test'),pos=4)
+  text(TAct,JointH$y,labels = paste0(round(k*JointPerc,2),'% of Null'),pos=2)
+  #coverage overlap
+  df <- merge(
+    as.data.frame(dN[c("x", "y")]),
+    as.data.frame(dT[c("x", "y")]),
+    by = "x", suffixes = c(".T", ".N")
+  )
+  df$comp <- as.numeric(df$y.T > df$y.N)
+  df$cross <- c(NA, diff(df$comp))
+  CPoint<-which(df$cross!=0)[which(max(df$y.T[which(df$cross!=0)])==df$y.T[which(df$cross!=0)])]
+  XPoint<-df$x[CPoint]
+  if (df$y.T[CPoint]<(10^-10)){
+    Overlap<-0
+  } else {
+    TArea<-k*(1-ecdf(TDis)(XPoint))
+    NArea<-k*ecdf(NDis)(XPoint)
+    Overlap<-round(TArea+NArea,2)
+  }
+  legend(legendpos,legend=c('Observed Similarity',paste('Internal of',GroupName),'Test Distribution','Null Distribution',paste0(Overlap,'% Overlap of Distributions')),fill=c(1,3,2,4,rgb(1,0,1)))
+  if (verbose==T){
+    return(list(Int,Overlap,XPoint,CompPerc,JointPerc))
+  }
+
   
 }
 
 #plots observed, test, null
 
-SimPlot<-function(PlotTitle,SimilarityObj,legendpos='topleft'){
+SimPlot<-function(PlotTitle,SimilarityObj,legendpos='topleft',verbose=F){
   k<-100
   #build density
   TDis<-SimilarityObj$Summary$Tanimoto
-  dT<-density(TDis,from=-0.05,to=1.05)
+  dT<-density(TDis,from=-0.05,to=1.05,na.rm=T)
   NDis<-SimilarityObj$NullOut$NullTani
-  dN<-density(NDis,from=-0.05,to=1.05)
+  dN<-density(NDis,from=-0.05,to=1.05,na.rm=T)
   TAct<-SimilarityObj$Actual
   #plot densities
   if (max(TDis)==0){
@@ -1084,14 +1134,21 @@ SimPlot<-function(PlotTitle,SimilarityObj,legendpos='topleft'){
   XPoint<-df$x[CPoint]
   if (df$y.T[CPoint]<(10^-10)){
     Overlap<-0
+    legend(legendpos,legend=c('Observed Similarity','Test Distribution','Null Distribution','0 = Alpha','0 = Beta'),fill=c(1,2,4,rgb(1,0,1),rgb(1,0,1)))
   } else {
-    TArea<-k*(1-ecdf(TDis)(XPoint))
-    NArea<-k*ecdf(NDis)(XPoint)
+    TArea<-(1-ecdf(TDis)(XPoint))
+    NArea<-ecdf(NDis)(XPoint)
     Overlap<-round(TArea+NArea,2)
+    AlphaValue<-round(NArea/(2-Overlap),2)
+    BetaValue<-round(TArea/(2-Overlap),2)
+    lines(rep(XPoint,2),c(0,df$y.T[CPoint]))
+    legend(legendpos,legend=c('Observed Similarity','Test Distribution','Null Distribution',paste0(AlphaValue,'= Alpha'),paste0(BetaValue,'= Beta')),fill=c(1,2,4,rgb(1,0,1),rgb(1,0,1)))
   }
   
-  legend(legendpos,legend=c('Observed Similarity','Test Distribution','Null Distribution',paste0(Overlap,'% Overlap of Distributions')),fill=c(1,2,4,rgb(1,0,1)))
   
+  if (verbose==T){
+    return(list(Overlap,XPoint,CompPerc,JointPerc))
+  }
   
 }
 
@@ -1147,7 +1204,7 @@ RelativeRank<-function(WithinRankObj,BetweenRankObj){
 
 
 ##Symmetric quality of contributions
-ContributionCheckInternal<-function(SimObj,IntA,IntB){
+ContributionCheckInternal<-function(SimObj,IntA,IntB,ks=F){
   IdentList<-colnames(SimObj$RankInfoActual)
   InternalCheck<-data.frame(matrix(NA,nrow=length(IdentList),ncol=3),row.names = IdentList)
   colnames(InternalCheck)<-c('Both','File1','File2')
@@ -1158,17 +1215,72 @@ ContributionCheckInternal<-function(SimObj,IntA,IntB){
       InternalCheck[l,2]=-1
     } else {
       Med<-median(IntA$InternalRankingInfo[l,])<SimObj$RankInfoActual[l]
-      KSObj<-ks.test(IntA$InternalRankingInfo[l,],SimObj$RankInfoFinal[l,],alternative='g')
-      KSVal<-KSObj$p.value<0.05
-      InternalCheck[l,2]<-KSVal*Med
+      if (ks==T){
+        KSObj<-ks.test(IntA$InternalRankingInfo[l,],SimObj$RankInfoFinal[l,],alternative='g')
+        KSVal<-KSObj$p.value<0.05
+        InternalCheck[l,2]<-KSVal*Med
+      } else if (ks==F){
+        TDis<-SimObj$RankInfoFinal[l,]
+        dT<-density(TDis,from=-0.05,to=1.05,na.rm=T)
+        NDis<-IntA$InternalRankingInfo[l,]
+        dN<-density(NDis,from=-0.05,to=1.05,na.rm=T)
+        k<-100
+        df <- merge(
+          as.data.frame(dN[c("x", "y")]),
+          as.data.frame(dT[c("x", "y")]),
+          by = "x", suffixes = c(".T", ".N")
+        )
+        df$comp <- as.numeric(df$y.T > df$y.N)
+        df$cross <- c(NA, diff(df$comp))
+        CPoint<-which(df$cross!=0)[which(max(df$y.T[which(df$cross!=0)])==df$y.T[which(df$cross!=0)])]
+        XPoint<-df$x[CPoint]
+        if (df$y.T[CPoint]<(10^-10)){
+          Overlap<-0
+          
+        } else {
+          TArea<-k*(1-ecdf(TDis)(XPoint))
+          NArea<-k*ecdf(NDis)(XPoint)
+          Overlap<-round(TArea+NArea,2)/(100+100-round(TArea+NArea,2))
+        }
+        
+        InternalCheck[l,2]<-(Overlap<=25)*Med
+      }
+      
+      
     }
     if (!(l %in% row.names(IntB$InternalRankingInfo))){
       InternalCheck[l,3]=-1
     } else {
       Med<-median(IntB$InternalRankingInfo[l,])<SimObj$RankInfoActual[l]
-      KSObj<-ks.test(IntB$InternalRankingInfo[l,],SimObj$RankInfoFinal[l,],alternative='g')
-      KSVal<-KSObj$p.value<0.05
-      InternalCheck[l,3]<-KSVal*Med
+      if (ks==T){
+        KSObj<-ks.test(IntB$InternalRankingInfo[l,],SimObj$RankInfoFinal[l,],alternative='g')
+        KSVal<-KSObj$p.value<0.05
+        InternalCheck[l,3]<-KSVal*Med
+      } else if (ks==F){
+        TDis<-SimObj$RankInfoFinal[l,]
+        dT<-density(TDis,from=-0.05,to=1.05,na.rm=T)
+        NDis<-IntB$InternalRankingInfo[l,]
+        dN<-density(NDis,from=-0.05,to=1.05,na.rm=T)
+        k<-100
+        df <- merge(
+          as.data.frame(dN[c("x", "y")]),
+          as.data.frame(dT[c("x", "y")]),
+          by = "x", suffixes = c(".T", ".N")
+        )
+        df$comp <- as.numeric(df$y.T > df$y.N)
+        df$cross <- c(NA, diff(df$comp))
+        CPoint<-which(df$cross!=0)[which(max(df$y.T[which(df$cross!=0)])==df$y.T[which(df$cross!=0)])]
+        XPoint<-df$x[CPoint]
+        if (df$y.T[CPoint]<(10^-10)){
+          Overlap<-0
+        } else {
+          TArea<-k*(1-ecdf(TDis)(XPoint))
+          NArea<-k*ecdf(NDis)(XPoint)
+          Overlap<-round(TArea+NArea,2)/(100+100-round(TArea+NArea,2))
+        }
+        
+        InternalCheck[l,3]<-(Overlap<=25)*Med
+      }
     }
     if ((InternalCheck[l,2]==0)&(InternalCheck[l,3]==0)){
       InternalCheck[l,1]<-0
@@ -1201,7 +1313,7 @@ ContributionCheckComp<-function(SimObj,ExclusionList='Default'){
   return(list('Raw'=CompCheck,'WinList'=IdentList[which(CompCheck[,1]==T)],'FailList'=IdentList[which(CompCheck[,1]!=T)]))
 }
 
-ContributionCheckJoint<-function(SimObj,ExclusionList='Default'){
+ContributionCheckJoint<-function(SimObj,ExclusionList='Default',ks=F){
   IdentList<-colnames(SimObj$RankInfoActual)
   if (ExclusionList[1]!='Default'){
     for (j in 1:length(ExclusionList)){
@@ -1214,8 +1326,34 @@ ContributionCheckJoint<-function(SimObj,ExclusionList='Default'){
     l<-IdentList[j]
     vic<-which(SimObj$NullRankInfoFinal[l,]==0)
     JointCheck[l,2]<-(ecdf(SimObj$NullRankInfoFinal[l,])(SimObj$RankInfoActual[l])<=0.25)
+    if (ks==T){
+      JointCheck[l,3]<-(ks.test(SimObj$RankInfoFinal[l,],SimObj$NullRankInfoFinal[l,],alternative='g')$p.value<=0.05)
+    } else if(ks==F) {
+      TDis<-SimObj$RankInfoFinal[l,]
+      dT<-density(TDis,from=-0.05,to=1.05,na.rm=T)
+      NDis<-SimObj$NullRankInfoFinal[l,]
+      dN<-density(NDis,from=-0.05,to=1.05,na.rm=T)
+      k<-100
+      df <- merge(
+        as.data.frame(dN[c("x", "y")]),
+        as.data.frame(dT[c("x", "y")]),
+        by = "x", suffixes = c(".T", ".N")
+      )
+      df$comp <- as.numeric(df$y.T > df$y.N)
+      df$cross <- c(NA, diff(df$comp))
+      CPoint<-which(df$cross!=0)[which(max(df$y.T[which(df$cross!=0)])==df$y.T[which(df$cross!=0)])]
+      XPoint<-df$x[CPoint]
+      if (df$y.T[CPoint]<(10^-10)){
+        Overlap<-0
+      } else {
+        TArea<-k*(1-ecdf(TDis)(XPoint))
+        NArea<-k*ecdf(NDis)(XPoint)
+        Overlap<-round(TArea+NArea,2)/(100+100-round(TArea+NArea,2))
+      }
+      
+      JointCheck[l,3]<-(Overlap<=25)
+    }
     
-    JointCheck[l,3]<-(ks.test(SimObj$RankingInfoFinal[l,],SimObj$NullRankInfoFinal[l,],alternative='g')<=0.05)
     JointCheck[l,1]<-(JointCheck[l,2]&JointCheck[l,3])
   }
   return(list('Raw'=JointCheck,'WinList'=IdentList[which(JointCheck[,1]==1)],'FailList'=IdentList[which(JointCheck[,1]!=1)]))
