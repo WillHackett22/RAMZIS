@@ -125,6 +125,77 @@ SimDataClean<-function(filename,kmin=2,rel=TRUE,normvector='Default'){
   return(data1)
 }
 
+SimDataCleanLog<-function(filename,kmin=2,rel=TRUE,normvector='Default'){
+  #Read in Data and measure dataframe size
+  if (typeof(filename)=='character'){
+    file1<-read.csv(filename,header=TRUE, row.names=1,stringsAsFactors = FALSE)
+    #normalize based off of normalization vector
+    if (length(normvector)==ncol(file1) ){
+      for (i in 1:ncol(file1)){
+        file1[,i]<-as.numeric(file1[,i])*normvector[i]
+      }
+    }
+    data1<-file1
+    #standardize data by max abundance 
+    if (rel){
+      for (i in 1:ncol(file1)){
+        data1[,i]<- as.numeric(file1[,i])/max(colSums(file1,na.rm = T))
+      }
+    }
+  } else if(typeof(filename)=='list'){
+    file1<-filename
+    if (length(normvector)==ncol(file1) ){
+      for (i in 1:ncol(file1)){
+        file1[,i]<-as.numeric(file1[,i])*normvector[i]
+      }
+    }
+    data1<-file1
+    if (rel){
+      for (i in 1:ncol(file1)){
+        data1[,i]<- as.numeric(file1[,i])/max(colSums(file1,na.rm = T))
+      }
+    }
+    
+    #print('Program Detected List for filename. Attempting use as dataframe')
+  }
+  file1[is.na(file1)]<-0
+  data1[is.na(data1)]<-0
+  
+  
+  rown<-dim(file1)[1] #GPs
+  coln<-dim(file1)[2] #samples
+  #Clean Dataframes: remove rows where there are one or fewer signals
+  #number of replicates
+  reps<- coln
+  num<-0
+  #count the missing values in rows
+  mvhold<-rep(0,rown)
+  for (row in 1:rown){
+    rowi<-row-num
+    mvcount<-0
+    #check how many missing values in a given row
+    for (col in 1:coln){
+      for (x in file1[row,col]){
+        if (x==0){
+          mvcount<- mvcount+1
+        }
+      }
+    }
+    mvhold[row]<-mvcount
+  }
+  #turn missing values into observed values
+  remhold<-coln-mvhold
+  #remove data where less than kmin (default=2) are seen
+  if (length(which(remhold<kmin))>0){
+    data1<-data1[-which(remhold<kmin),]
+  }
+  #remove data where mean is lower than logx=-10
+  if (sum(-10>log(apply(data1,1,mean)))>0){
+    data1<-data1[-which(-10>log(apply(data1,1,mean))),]
+  }
+  return(data1)
+}
+
 PeptideCollapser<-function(filename,kmin=2,rel=TRUE,sequonvector){
   datfile1<-SimDataClean(filename,kmin,rel)
   #find sequon sections
@@ -520,8 +591,8 @@ BetweenSimBootstrap2<-function(filename1,filename2,combo,kmin=2,rel=TRUE,MVCorre
 ###Preserved Symmetry Comparison
 SymmetricalSimBootstrap<-function(filename1,filename2,kmin=2,rel=TRUE,MVCorrection=TRUE,mn=FALSE,bootie=TRUE){
   #load data and acquire glycopeptides
-  file1<-SimDataClean(filename1,kmin,rel)
-  file2<-SimDataClean(filename2,kmin,rel)
+  file1<-SimDataCleanLog(filename1,kmin,rel)
+  file2<-SimDataCleanLog(filename2,kmin,rel)
   glycopep1<-c(row.names(file1))
   glycopep2<-c(row.names(file2))
   glycojoint<-unique(c(glycopep1,glycopep2))
@@ -604,7 +675,7 @@ SymmetricalSimBootstrap<-function(filename1,filename2,kmin=2,rel=TRUE,MVCorrecti
       temp1[temp1==0]<-NA
     }
     T1_[,j]<-rowMeans(temp1,na.rm =TRUE)
-    T10[,j]<-sum(rowMeans(temp1,na.rm =TRUE)^2)
+    T10[,j]<-sum((rowMeans(temp1,na.rm =TRUE))^2)
     for (m in 1:length(gl1)){
       nacheck<-1-sum(temp1[gl1[m],]==0)/ncol(temp1)
       if (is.na(nacheck)){
@@ -627,7 +698,7 @@ SymmetricalSimBootstrap<-function(filename1,filename2,kmin=2,rel=TRUE,MVCorrecti
       temp2[temp2==0]<-NA
     }
     T_1[,j]<-rowMeans(temp2,na.rm =TRUE)
-    T01[,j]<-sum(rowMeans(temp2,na.rm =TRUE)^2)
+    T01[,j]<-sum((rowMeans(temp2,na.rm =TRUE))^2)
     for (m in 1:length(gl2)){
       nacheck<-1-sum(temp2[gl2[m],]==0)/ncol(temp2)
       if (is.na(nacheck)){
@@ -670,7 +741,7 @@ SymmetricalSimBootstrap<-function(filename1,filename2,kmin=2,rel=TRUE,MVCorrecti
     }
   }
   
-  tan1<-colSums(tanmatholdW)
+  tan1<-colSums(tanmatholdW,na.rm=T)
   #calculate null
   colnt<-coln1+coln2
   if (bootie){
@@ -683,9 +754,9 @@ SymmetricalSimBootstrap<-function(filename1,filename2,kmin=2,rel=TRUE,MVCorrecti
       combot2<-data.frame(gtools::combinations(colnt,coln2,repeats.allowed = TRUE))
     } else {
       print('There be a number of samples here. The bootstrap generation will be slower.')
-      combot1<-data.frame(matrix(1,nrow=100,ncol=coln1))
-      combot2<-data.frame(matrix(1,nrow=100,ncol=coln2))
-      for (j in 1:100){
+      combot1<-data.frame(matrix(1,nrow=150,ncol=coln1))
+      combot2<-data.frame(matrix(1,nrow=150,ncol=coln2))
+      for (j in 1:150){
         combot1[j,]<-sort(sample(colnt,coln1,replace = TRUE))
         combot2[j,]<-sort(sample(colnt,coln2,replace = TRUE))
       }
@@ -697,33 +768,56 @@ SymmetricalSimBootstrap<-function(filename1,filename2,kmin=2,rel=TRUE,MVCorrecti
       }
       
     }
-    if (coln1==coln2){
-      combot<-rbind(combot1,combot2,all=T,fill=T)
-      if (sum(duplicated(combot))>0){
-        combot<-combot[-which(duplicated(combot)),]
-      }
-      combot1<-combot[1:floor(dim(combot)[1]/2),]
-      combot2<-combot[(floor(dim(combot)[1]/2)+1):dim(combot)[1],]
-      row.names(combot2)<-NULL    
-      } 
+     
   } else {
     combot<-'Error'
   }
-  #remove all of one side
-  if (sum(rowSums(combot1<=coln1)==coln1)>0 | sum(rowSums(combot1>coln1)==coln1)>0){
-    if (sum(rowSums(combot1<=coln1)==coln1)>0){
-      combot1<-combot1[-which(rowSums(combot1<=coln1)==coln1),]
-    } else {
-      combot1<-combot1[-which(rowSums(combot1>coln1)==coln1),]
+  row.names(combot2)<-NULL
+  row.names(combot1)<-NULL
+  
+  #remove all with less than 2 of each side
+  if (coln1>3 & coln2>3){
+    minsample<-1
+  } else {
+    minsample<-0
+  }
+  if (sum(rowSums(combot1<=coln1)>=(coln1-minsample))>0 | sum(rowSums(combot1>coln1)>=(coln1-minsample))>0){
+    if (sum(rowSums(combot1<=coln1)>=(coln1-1))>0){
+      combot1<-combot1[-which(rowSums(combot1<=coln1)>=(coln1-minsample)),]
+      row.names(combot1)<-NULL
+    } 
+    if (sum(rowSums(combot1>coln1)>=(coln1-minsample))>0){
+      combot1<-combot1[-which(rowSums(combot1>coln1)>=(coln1-minsample)),]
+      row.names(combot1)<-NULL
     }
   }
-  if (sum(rowSums(combot2>coln1)==coln2)>0 | sum(rowSums(combot2<=coln1)==coln2)>0){
-    if (sum(rowSums(combot2<=coln1)==coln2)>0){
-      combot2<-combot2[-which(rowSums(combot2<=coln1)==coln2),]
-    } else {
-      combot2<-combot2[-which(rowSums(combot2>coln1)==coln2),]
+  
+  if (sum(rowSums(combot2>coln1)>=(coln2-minsample))>0 | sum(rowSums(combot2<=coln1)>=(coln2-minsample))>0){
+    if (sum(rowSums(combot2<=coln1)>=(coln2-minsample))>0){
+      combot2<-combot2[-which(rowSums(combot2<=coln1)>=(coln2-minsample)),]
+      row.names(combot2)<-NULL
+    } 
+    if (sum(rowSums(combot2>coln1)>=(coln2-minsample))>0){
+      combot2<-combot2[-which(rowSums(combot2>coln1)>=(coln2-minsample)),]
+      row.names(combot2)<-NULL
     }
   }
+  row.names(combot2)<-NULL
+  row.names(combot1)<-NULL
+  #even out null distributions
+  if (coln1==coln2){
+    combot<-rbind(combot1,combot2,all=T,fill=T)
+    if (sum(duplicated(combot))>0){
+      combot<-combot[-which(duplicated(combot)),]
+    }
+    combot1<-combot[1:floor(dim(combot)[1]/2),]
+    combot2<-combot[(floor(dim(combot)[1]/2)+1):(dim(combot)[1]-1),]
+    row.names(combot2)<-NULL
+    row.names(combot1)<-NULL
+  }
+  row.names(combot2)<-NULL
+  row.names(combot1)<-NULL
+  
   
   jacN<-rep(0,nrow(combot1)*nrow(combot2)) # jaccard holder depricated
   tanN<-rep(0,nrow(combot1)*nrow(combot2)) # tanimoto holder
@@ -751,7 +845,7 @@ SymmetricalSimBootstrap<-function(filename1,filename2,kmin=2,rel=TRUE,MVCorrecti
       temp1[temp1==0]<-NA
     }
     T1_N[,j]<-rowMeans(temp1,na.rm =TRUE)
-    T10N[,j]<-sum(rowMeans(temp1,na.rm =TRUE)^2)
+    T10N[,j]<-sum((rowMeans(temp1,na.rm =TRUE))^2)
     for (m in 1:length(gj)){
       nacheck<-1-sum(temp1[gj[m],]==0)/ncol(temp1)
       if (is.na(nacheck)){
@@ -774,7 +868,7 @@ SymmetricalSimBootstrap<-function(filename1,filename2,kmin=2,rel=TRUE,MVCorrecti
       temp2[temp2==0]<-NA
     }
     T_1N[,j]<-rowMeans(temp2,na.rm =TRUE)
-    T01N[,j]<-sum(rowMeans(temp2,na.rm =TRUE)^2)
+    T01N[,j]<-sum((rowMeans(temp2,na.rm =TRUE))^2)
     for (m in 1:length(gj)){
       nacheck<-1-sum(temp2[gj[m],]==0)/ncol(temp2)
       if (is.na(nacheck)){
@@ -819,7 +913,7 @@ SymmetricalSimBootstrap<-function(filename1,filename2,kmin=2,rel=TRUE,MVCorrecti
   
   #calculate actual similarity
   T1_a<-rowMeans(file1,na.rm =TRUE)
-  T10a<-sum(rowMeans(file1,na.rm =TRUE)^2)
+  T10a<-sum((rowMeans(file1,na.rm =TRUE))^2)
   presence1<-data.frame(matrix(0,nrow=length(gl1),ncol=1))
   row.names(presence1)<-gl1
   for (m in 1:length(gl1)){
@@ -830,7 +924,7 @@ SymmetricalSimBootstrap<-function(filename1,filename2,kmin=2,rel=TRUE,MVCorrecti
     presence1[gl1[m],1]<-nacheck
   }
   T_1a<-rowMeans(file2,na.rm =TRUE)
-  T01a<-sum(rowMeans(file2,na.rm =TRUE)^2)
+  T01a<-sum((rowMeans(file2,na.rm =TRUE))^2)
   presence2<-data.frame(matrix(0,nrow=length(gl2),ncol=1))
   row.names(presence2)<-gl2
   for (m in 1:length(gl2)){
@@ -1017,7 +1111,7 @@ InternalSimilarity<-function(filename,BootSet,kmin=1,rel=TRUE,MVCorrection=TRUE,
 }
 
 #plots internal boot object[[]]: 1 is the first
-InternalQuality<-function(filename,BootSet,SimObj,PlotTitle,GroupName,Int=NULL,kmin=2,rel=TRUE,MVCorrection=TRUE,mn=FALSE,verbose=FALSE,legendpos='topleft'){
+InternalQuality<-function(filename,BootSet,SimilarityObj,PlotTitle,GroupName,Int=NULL,kmin=2,rel=TRUE,MVCorrection=TRUE,mn=FALSE,verbose=FALSE,legendpos='topleft'){
   if (!is.null(Int)){
     #Use Int as Int object
   } else {
@@ -1027,11 +1121,11 @@ InternalQuality<-function(filename,BootSet,SimObj,PlotTitle,GroupName,Int=NULL,k
   k<-100
   #build density
   TDis<-SimilarityObj$Summary$Tanimoto
-  dT<-density(TDis,from=-0.05,to=1.05,na.rm=T)
+  dT<-density(TDis,from=-0.1,to=1.1,na.rm=T)
   NDis<-SimilarityObj$NullOut$NullTani
-  dN<-density(NDis,from=-0.05,to=1.05,na.rm=T)
+  dN<-density(NDis,from=-0.1,to=1.1,na.rm=T)
   IDis<-Int$InternalTanimoto
-  dI<-density(IDis,from=-0.05,to=1.05,na.rm=T)
+  dI<-density(IDis,from=-0.2,to=1.2,na.rm=T)
   TAct<-SimilarityObj$Actual
   #plot densities
   if (max(TDis)==0){
@@ -1092,9 +1186,9 @@ SimPlot<-function(PlotTitle,SimilarityObj,legendpos='topleft',verbose=F){
   k<-100
   #build density
   TDis<-SimilarityObj$Summary$Tanimoto
-  dT<-density(TDis,from=-0.05,to=1.05,na.rm=T)
+  dT<-density(TDis,from=-0.1,to=1.1,na.rm=T)
   NDis<-SimilarityObj$NullOut$NullTani
-  dN<-density(NDis,from=-0.05,to=1.05,na.rm=T)
+  dN<-density(NDis,from=-0.1,to=1.1,na.rm=T)
   TAct<-SimilarityObj$Actual
   #plot densities
   if (max(TDis)==0){
