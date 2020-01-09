@@ -1193,11 +1193,11 @@ SimPlot<-function(PlotTitle,SimilarityObj,legendpos='topleft',verbose=F){
   #plot densities
   if (max(TDis)==0){
     mh<-max(c(k*dN$y/sum(dN$y)))
-    plot(c(0,0,0.1,0.1),c(0,mh,mh,0),xlim=c(0,1),ylim=c(0,mh),main=PlotTitle,type='l',xlab='Similarity',ylab='% of Distribution')
+    plot(c(0,0,0.1,0.1),c(0,mh,mh,0),xlim=c(0,1),ylim=c(0,mh),main=PlotTitle,type='l',xlab='Similarity',ylab='Density')
     polygon(c(0,0,0.1,0.1),c(0,mh,mh,0),col=rgb(1,0,0,0.5))
   } else {
     mh<-max(c(k*dT$y/sum(dT$y),k*dN$y/sum(dN$y)))
-    plot(dT$x,k*dT$y/sum(dT$y),xlim=c(0,1),ylim=c(0,mh),main=PlotTitle,type='l',xlab='Similarity',ylab='% of Distribution')
+    plot(dT$x,k*dT$y/sum(dT$y),xlim=c(0,1),ylim=c(0,mh),main=PlotTitle,type='l',xlab='Similarity',ylab='Density')
     polygon(dT$x,k*dT$y/sum(dT$y),col=rgb(1,0,0,0.5))
   }
   lines(dN$x,k*dN$y/sum(dN$y))
