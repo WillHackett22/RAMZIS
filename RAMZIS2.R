@@ -1202,7 +1202,7 @@ SimPlot<-function(PlotTitle,SimilarityObj,legendpos='topleft',verbose=F){
   }
   lines(dN$x,k*dN$y/sum(dN$y))
   polygon(dN$x,k*dN$y/sum(dN$y),col=rgb(0,0,1,0.5))
-  lines(rep(TAct,2),c(0,100),col=1,lwd=3)
+  
   #percentile location
   if (max(TDis)!=0){
     CompPerc<-ecdf(TDis)(TAct)
@@ -1239,7 +1239,7 @@ SimPlot<-function(PlotTitle,SimilarityObj,legendpos='topleft',verbose=F){
   
   if (df$y.T[CPoint]<(10^-10)){
     Overlap<-0
-    legend(legendpos,legend=c('Observed Similarity','Test Distribution','Null Distribution','0 = Alpha','0 = Beta'),fill=c(1,rgb(1,0,0,0.5),rgb(0,0,1,0.5),'darkgray','black'))
+    legend(legendpos,legend=c('Observed Similarity','Test Distribution','Null Distribution','0 = Alpha','0 = Beta'),fill=c(NA,rgb(1,0,0,0.5),rgb(0,0,1,0.5),'darkgray','black'),lty=c(1,rep(NA,4)))
     AlphaValue=0
     BetaValue=0
   } else {
@@ -1253,7 +1253,8 @@ SimPlot<-function(PlotTitle,SimilarityObj,legendpos='topleft',verbose=F){
     polygon(dN$x[dN$x<=XPoint],c(k*dN$y[dN$x<XPoint]/sum(dN$y),0),col='darkgray')
     #make beta area
     polygon(dT$x[dT$x>=XPoint],c(0,k*dT$y[dT$x>XPoint]/sum(dT$y)),col='black')
-    legend(legendpos,legend=c('Observed Similarity','Test Distribution','Null Distribution',paste0(AlphaValue,'= Alpha'),paste0(BetaValue,'= Beta')),fill=c(1,rgb(1,0,0,0.5),rgb(0,0,1,0.5),'darkgray','black'))
+    lines(rep(TAct,2),c(0,100),col=1,lwd=3)
+    legend(legendpos,legend=c('Observed Similarity','Test Distribution','Null Distribution',paste0('Alpha=',AlphaValue),paste0('Beta=',BetaValue)),fill=c(NA,rgb(1,0,0,0.5),rgb(0,0,1,0.5),'darkgray','black'),lty=c(1,rep(NA,4)),density=c(0,NA,NA,NA,NA),border=c(NA,1,1,1,1))
   }
   
   
