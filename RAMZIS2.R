@@ -1153,8 +1153,8 @@ InternalQuality<-function(filename,BootSet,SimilarityObj,PlotTitle,GroupName,Int
   if (is.na(JointH$y)){
     JointH$y<-0
   }
-  text(TAct,CompH$y,labels = paste0(round(k*CompPerc,2),'% of Test'),pos=4)
-  text(TAct,JointH$y,labels = paste0(round(k*JointPerc,2),'% of Null'),pos=2)
+  #text(TAct,CompH$y,labels = paste0(round(k*CompPerc,2),'% of Test'),pos=4)
+  #text(TAct,JointH$y,labels = paste0(round(k*JointPerc,2),'% of Null'),pos=2)
   #coverage overlap
   df <- merge(
     as.data.frame(dN[c("x", "y")]),
@@ -1193,8 +1193,8 @@ SimPlot<-function(PlotTitle,SimilarityObj,legendpos='topleft',verbose=F){
   #plot densities
   if (max(TDis)==0){
     mh<-max(c(k*dN$y/sum(dN$y)))
-    plot(c(0,0,0.1,0.1),c(0,mh,mh,0),xlim=c(0,1),ylim=c(0,mh),main=PlotTitle,type='l',xlab='Similarity',ylab='Density')
-    polygon(c(0,0,0.1,0.1),c(0,mh,mh,0),col=rgb(1,0,0,0.5))
+    plot(c(0,0,0.05,0.05),c(0,mh,mh,0),xlim=c(0,1),ylim=c(0,mh),main=PlotTitle,type='l',xlab='Similarity',ylab='Density')
+    polygon(c(0,0,0.05,0.05),c(0,mh,mh,0),col=rgb(1,0,0,0.5))
   } else {
     mh<-max(c(k*dT$y/sum(dT$y),k*dN$y/sum(dN$y)))
     plot(dT$x,k*dT$y/sum(dT$y),xlim=c(0,1),ylim=c(0,mh),main=PlotTitle,type='l',xlab='Similarity',ylab='Density')
@@ -1204,44 +1204,61 @@ SimPlot<-function(PlotTitle,SimilarityObj,legendpos='topleft',verbose=F){
   polygon(dN$x,k*dN$y/sum(dN$y),col=rgb(0,0,1,0.5))
   lines(rep(TAct,2),c(0,100),col=1,lwd=3)
   #percentile location
-  CompPerc<-ecdf(TDis)(TAct)
-  JointPerc<-ecdf(NDis)(TAct)
-  CompH<-approx(dT$x,k*dT$y/sum(dT$y),TAct)
-  JointH<-approx(dN$x,k*dN$y/sum(dN$y),TAct)
-  if (is.na(CompH$y)){
-    CompH$y<-0
+  if (max(TDis)!=0){
+    CompPerc<-ecdf(TDis)(TAct)
+    JointPerc<-ecdf(NDis)(TAct)
+    CompH<-approx(dT$x,k*dT$y/sum(dT$y),TAct)
+    JointH<-approx(dN$x,k*dN$y/sum(dN$y),TAct)
+    if (is.na(CompH$y)){
+      CompH$y<-0
+    }
+    if (is.na(JointH$y)){
+      JointH$y<-0
+    }
+    # text(TAct,CompH$y,labels = paste0(round(k*CompPerc,2),'% of Test'),pos=4)
+    # text(TAct,JointH$y,labels = paste0(round(k*JointPerc,2),'% of Null'),pos=2)
+    #coverage overlap
+    df <- merge(
+      as.data.frame(dN[c("x", "y")]),
+      as.data.frame(dT[c("x", "y")]),
+      by = "x", suffixes = c(".T", ".N")
+    )
+    df$comp <- as.numeric(df$y.T > df$y.N)
+    df$cross <- c(NA, diff(df$comp))
+    CPoint<-which(df$cross!=0)[which(max(df$y.T[which(df$cross!=0)])==df$y.T[which(df$cross!=0)])]
+    XPoint<-df$x[CPoint]
+  } else {
+    CPoint<-1
+    df <- merge(
+      as.data.frame(dN[c("x", "y")]),
+      as.data.frame(dT[c("x", "y")]),
+      by = "x", suffixes = c(".T", ".N")
+    )
+    df$Y.T[CPoint]<-0
   }
-  if (is.na(JointH$y)){
-    JointH$y<-0
-  }
-  text(TAct,CompH$y,labels = paste0(round(k*CompPerc,2),'% of Test'),pos=4)
-  text(TAct,JointH$y,labels = paste0(round(k*JointPerc,2),'% of Null'),pos=2)
-  #coverage overlap
-  df <- merge(
-    as.data.frame(dN[c("x", "y")]),
-    as.data.frame(dT[c("x", "y")]),
-    by = "x", suffixes = c(".T", ".N")
-  )
-  df$comp <- as.numeric(df$y.T > df$y.N)
-  df$cross <- c(NA, diff(df$comp))
-  CPoint<-which(df$cross!=0)[which(max(df$y.T[which(df$cross!=0)])==df$y.T[which(df$cross!=0)])]
-  XPoint<-df$x[CPoint]
+  
   if (df$y.T[CPoint]<(10^-10)){
     Overlap<-0
-    legend(legendpos,legend=c('Observed Similarity','Test Distribution','Null Distribution','0 = Alpha','0 = Beta'),fill=c(1,2,4,rgb(1,0,1),rgb(1,0,1)))
+    legend(legendpos,legend=c('Observed Similarity','Test Distribution','Null Distribution','0 = Alpha','0 = Beta'),fill=c(1,rgb(1,0,0,0.5),rgb(0,0,1,0.5),'darkgray','black'))
+    AlphaValue=0
+    BetaValue=0
   } else {
     TArea<-(1-ecdf(TDis)(XPoint))
     NArea<-ecdf(NDis)(XPoint)
     Overlap<-round(TArea+NArea,2)
     AlphaValue<-round(NArea/(2-Overlap),2)
     BetaValue<-round(TArea/(2-Overlap),2)
-    lines(rep(XPoint,2),c(0,df$y.T[CPoint]))
-    legend(legendpos,legend=c('Observed Similarity','Test Distribution','Null Distribution',paste0(AlphaValue,'= Alpha'),paste0(BetaValue,'= Beta')),fill=c(1,2,4,rgb(1,0,1),rgb(1,0,1)))
+    #lines(rep(XPoint,2),c(0,df$y.T[CPoint]))
+    #make alpha area
+    polygon(dN$x[dN$x<=XPoint],c(k*dN$y[dN$x<XPoint]/sum(dN$y),0),col='darkgray')
+    #make beta area
+    polygon(dT$x[dT$x>=XPoint],c(0,k*dT$y[dT$x>XPoint]/sum(dT$y)),col='black')
+    legend(legendpos,legend=c('Observed Similarity','Test Distribution','Null Distribution',paste0(AlphaValue,'= Alpha'),paste0(BetaValue,'= Beta')),fill=c(1,rgb(1,0,0,0.5),rgb(0,0,1,0.5),'darkgray','black'))
   }
   
   
   if (verbose==T){
-    return(list(Overlap,XPoint,CompPerc,JointPerc))
+    return(list(Overlap,XPoint,CompPerc,JointPerc,AlphaValue,BetaValue))
   }
   
 }
