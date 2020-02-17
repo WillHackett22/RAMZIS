@@ -58,7 +58,7 @@ GlycReRead<-function(Filelist,NormVector){
 GlyLineRead<-function(Filelist){}
 
 #SimDataClean
-SimDataClean<-function(filename,kmin=2,rel=TRUE,normvector='Default'){
+SimDataClean<-function(filename,kmin=2,rel=TRUE,normvector='Default',logopt=FALSE){
   #Read in Data and measure dataframe size
   if (typeof(filename)=='character'){
     file1<-read.csv(filename,header=TRUE, row.names=1,stringsAsFactors = FALSE)
@@ -94,6 +94,9 @@ SimDataClean<-function(filename,kmin=2,rel=TRUE,normvector='Default'){
   file1[is.na(file1)]<-0
   data1[is.na(data1)]<-0
   
+  if (logopt){
+    data1<-log(data1)
+  }
   
   rown<-dim(file1)[1] #GPs
   coln<-dim(file1)[2] #samples
@@ -589,7 +592,7 @@ BetweenSimBootstrap2<-function(filename1,filename2,combo,kmin=2,rel=TRUE,MVCorre
 }
 
 ###Preserved Symmetry Comparison
-SymmetricalSimBootstrap<-function(filename1,filename2,kmin=2,rel=TRUE,MVCorrection=TRUE,mn=FALSE,bootie=TRUE){
+SymmetricalSimBootstrap<-function(filename1,filename2,kmin=2,rel=TRUE,MVCorrection=TRUE,mn=FALSE,bootie=TRUE,logopt=FALSE){
   #load data and acquire glycopeptides
   file1<-SimDataCleanLog(filename1,kmin,rel)
   file2<-SimDataCleanLog(filename2,kmin,rel)
@@ -1008,8 +1011,8 @@ SimKLD<-function(TestSim,RefSim,breaks=20){
   return(c(KLD,TestEntropy))
 }
   
-InternalSimilarity<-function(filename,BootSet,kmin=1,rel=TRUE,MVCorrection=TRUE,mn=FALSE){
-  file1<-SimDataClean(filename,kmin,rel)
+InternalSimilarity<-function(filename,BootSet,kmin=1,rel=TRUE,MVCorrection=TRUE,mn=FALSE,logopt=FALSE){
+  file1<-SimDataCleanLog(filename,kmin,rel)
   glycopep1<-c(row.names(file1))
   glycojoint<-glycopep1
   glycopep2<-glycopep1
@@ -1125,7 +1128,7 @@ InternalQuality<-function(filename,BootSet,SimilarityObj,PlotTitle,GroupName,Int
   NDis<-SimilarityObj$NullOut$NullTani
   dN<-density(NDis,from=-0.1,to=1.1,na.rm=T)
   IDis<-Int$InternalTanimoto
-  dI<-density(IDis,from=-0.2,to=1.2,na.rm=T)
+  dI<-density(IDis,from=-0.1,to=1.1,na.rm=T)
   TAct<-SimilarityObj$Actual
   #plot densities
   if (max(TDis)==0){
@@ -1157,7 +1160,7 @@ InternalQuality<-function(filename,BootSet,SimilarityObj,PlotTitle,GroupName,Int
   #text(TAct,JointH$y,labels = paste0(round(k*JointPerc,2),'% of Null'),pos=2)
   #coverage overlap
   df <- merge(
-    as.data.frame(dN[c("x", "y")]),
+    as.data.frame(dI[c("x", "y")]),
     as.data.frame(dT[c("x", "y")]),
     by = "x", suffixes = c(".T", ".N")
   )
@@ -1165,14 +1168,22 @@ InternalQuality<-function(filename,BootSet,SimilarityObj,PlotTitle,GroupName,Int
   df$cross <- c(NA, diff(df$comp))
   CPoint<-which(df$cross!=0)[which(max(df$y.T[which(df$cross!=0)])==df$y.T[which(df$cross!=0)])]
   XPoint<-df$x[CPoint]
+  
+  
+  
   if (df$y.T[CPoint]<(10^-10)){
     Overlap<-0
   } else {
-    TArea<-k*(1-ecdf(TDis)(XPoint))
-    NArea<-k*ecdf(NDis)(XPoint)
-    Overlap<-round(TArea+NArea,2)
+    polygon(c(dI$x[1:CPoint],dT$x[CPoint+1:length(dT$x)]),c(k*dI$y[1:CPoint]/sum(dI$y),k*dT$y[CPoint+1:length(dT$y)]/sum(dT$y)),col='grey')
+    TArea<-(1-ecdf(TDis)(XPoint))
+    IArea<-ecdf(IDis)(XPoint)
+    Overlap1<-round(TArea+IArea,2)
+    Overlap<-round(100*Overlap1/(2-Overlap1),2)
   }
-  legend(legendpos,legend=c('Observed Similarity',paste('Internal of',GroupName),'Test Distribution','Null Distribution',paste0(Overlap,'% Overlap of Distributions')),fill=c(1,3,2,4,rgb(1,0,1)))
+  
+  
+  
+  legend(legendpos,legend=c('Observed Similarity',paste('Internal of',GroupName),'Test Distribution','Null Distribution',paste0(Overlap,'% Overlap of Internal & Test Distributions')),fill=c(1,3,2,4,'grey'))
   if (verbose==T){
     return(list(Int,Overlap,XPoint,CompPerc,JointPerc))
   }
@@ -1250,9 +1261,9 @@ SimPlot<-function(PlotTitle,SimilarityObj,legendpos='topleft',verbose=F){
     BetaValue<-round(TArea/(2-Overlap),2)
     #lines(rep(XPoint,2),c(0,df$y.T[CPoint]))
     #make alpha area
-    polygon(dN$x[dN$x<=XPoint],c(k*dN$y[dN$x<XPoint]/sum(dN$y),0),col='darkgray')
+    polygon(c(dN$x[dN$x<=XPoint],dN$x[dN$x==XPoint]),c(k*dN$y[dN$x<=XPoint]/sum(dN$y),0),col='darkgray')
     #make beta area
-    polygon(dT$x[dT$x>=XPoint],c(0,k*dT$y[dT$x>XPoint]/sum(dT$y)),col='black')
+    polygon(c(dT$x[dT$x==XPoint],dT$x[dT$x>=XPoint]),c(0,k*dT$y[dT$x>=XPoint]/sum(dT$y)),col='black')
     lines(rep(TAct,2),c(0,100),col=1,lwd=3)
     legend(legendpos,legend=c('Observed Similarity','Test Distribution','Null Distribution',paste0('Alpha=',AlphaValue),paste0('Beta=',BetaValue)),fill=c(NA,rgb(1,0,0,0.5),rgb(0,0,1,0.5),'darkgray','black'),lty=c(1,rep(NA,4)),density=c(0,NA,NA,NA,NA),border=c(NA,1,1,1,1))
   }
@@ -1682,9 +1693,9 @@ RAMZISMain<-function(){
 }
 
 #Function to separate glycopeptides by same peptide backbone
-PeptideSegment<-function(filename1,filename2,kmin=2,simtype="Tanimoto",rel=TRUE,OverallName,SampleName1,SampleName2,mn=FALSE){
-  datfile1<-SimDataClean(filename1,kmin=kmin,rel = rel)
-  datfile2<-SimDataClean(filename2,kmin=kmin,rel = rel)
+PeptideSegment<-function(filename1,filename2,kmin=2,simtype="Tanimoto",rel=TRUE,OverallName,SampleName1,SampleName2,mn=FALSE,logopt=FALSE){
+  datfile1<-SimDataCleanLog(filename1,kmin=kmin,rel = rel)
+  datfile2<-SimDataCleanLog(filename2,kmin=kmin,rel = rel)
   Rnames1<-row.names(datfile1)
   Cleaned1<-gsub("\\s*\\{[^\\}]+\\}","",gsub("\\s*\\([^\\)]+\\)","",Rnames1))
   UniCle1<-unique(Cleaned1)
