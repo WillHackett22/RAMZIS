@@ -1132,18 +1132,18 @@ InternalQuality<-function(filename,BootSet,SimilarityObj,PlotTitle,GroupName,Int
   TAct<-SimilarityObj$Actual
   #plot densities
   if (max(TDis)==0){
-    mh<-max(c(k*dN$y/sum(dN$y)))
+    mh<-max(c(k*dI$y/sum(dI$y)))
     plot(c(0,0,0.1,0.1),c(0,mh,mh,0),xlim=c(0,1),ylim=c(0,mh),main=PlotTitle,type='l',xlab='Similarity',ylab='% of Distribution')
     polygon(c(0,0,0.1,0.1),c(0,mh,mh,0),col=rgb(1,0,0,0.5))
   } else {
-    mh<-max(c(k*dT$y/sum(dT$y),k*dN$y/sum(dN$y)))
+    mh<-max(c(k*dT$y/sum(dT$y),k*dI$y/sum(dI$y)))
     plot(dT$x,k*dT$y/sum(dT$y),xlim=c(0,1),ylim=c(0,mh),main=PlotTitle,type='l',xlab='Similarity',ylab='% of Distribution')
-    polygon(dT$x,k*dT$y/sum(dT$y),col=rgb(1,0,0,0.5))
+    polygon(c(-0.1001,dT$x,1.1001),c(0,k*dT$y/sum(dT$y),0),col=rgb(1,0,0,0.5))
   }
-  lines(dN$x,k*dN$y/sum(dN$y))
-  polygon(dN$x,k*dN$y/sum(dN$y),col=rgb(0,0,1,0.5))
+  #lines(dN$x,k*dN$y/sum(dN$y))
+  #polygon(dN$x,k*dN$y/sum(dN$y),col=rgb(0,0,1,0.5))
   lines(dI$x,k*dI$y/sum(dI$y))
-  polygon(dI$x,k*dI$y/sum(dI$y),col=rgb(0,1,0,0.5))
+  polygon(c(-0.1001,dI$x,1.1001),c(0,k*dI$y/sum(dI$y),0),col=rgb(0,1,0,0.5))
   lines(rep(TAct,2),c(0,100),col=1,lwd=3)
   #percentile location
   CompPerc<-ecdf(TDis)(TAct)
@@ -1174,7 +1174,11 @@ InternalQuality<-function(filename,BootSet,SimilarityObj,PlotTitle,GroupName,Int
   if (df$y.T[CPoint]<(10^-10)){
     Overlap<-0
   } else {
-    polygon(c(dI$x[1:CPoint],dT$x[CPoint+1:length(dT$x)]),c(k*dI$y[1:CPoint]/sum(dI$y),k*dT$y[CPoint+1:length(dT$y)]/sum(dT$y)),col='grey')
+    
+    #make alpha area
+    polygon(c(-0.1001,dI$x[dI$x<=XPoint],dI$x[dI$x==XPoint]),c(0,k*dI$y[dI$x<=XPoint]/sum(dI$y),0),col='grey')
+    #make beta area
+    polygon(c(dT$x[dT$x==XPoint],dT$x[dT$x>=XPoint],1.1001),c(0,k*dT$y[dT$x>=XPoint]/sum(dT$y),0),col='grey')
     TArea<-(1-ecdf(TDis)(XPoint))
     IArea<-ecdf(IDis)(XPoint)
     Overlap1<-round(TArea+IArea,2)
@@ -1183,7 +1187,7 @@ InternalQuality<-function(filename,BootSet,SimilarityObj,PlotTitle,GroupName,Int
   
   
   
-  legend(legendpos,legend=c('Observed Similarity',paste('Internal of',GroupName),'Test Distribution','Null Distribution',paste0(Overlap,'% Overlap of Internal & Test Distributions')),fill=c(1,3,2,4,'grey'))
+  legend(legendpos,legend=c('Observed Similarity',paste('Internal of',GroupName),'Test Distribution',paste0(Overlap,'% Overlap of Internal & Test Distributions')),fill=c(NA,3,2,'grey'),lty=c(1,rep(NA,4)),lwd=c(3,NA,NA,NA,NA),density=c(0,NA,NA,NA,NA),border=c(NA,1,1,1,1))
   if (verbose==T){
     return(list(Int,Overlap,XPoint,CompPerc,JointPerc))
   }
@@ -1209,10 +1213,10 @@ SimPlot<-function(PlotTitle,SimilarityObj,legendpos='topleft',verbose=F){
   } else {
     mh<-max(c(k*dT$y/sum(dT$y),k*dN$y/sum(dN$y)))
     plot(dT$x,k*dT$y/sum(dT$y),xlim=c(0,1),ylim=c(0,mh),main=PlotTitle,type='l',xlab='Similarity',ylab='Density')
-    polygon(dT$x,k*dT$y/sum(dT$y),col=rgb(1,0,0,0.5))
+    polygon(c(-0.1001,dT$x,1.1001),c(0,k*dT$y/sum(dT$y),0),col=rgb(1,0,0,0.5))
   }
   lines(dN$x,k*dN$y/sum(dN$y))
-  polygon(dN$x,k*dN$y/sum(dN$y),col=rgb(0,0,1,0.5))
+  polygon(c(-0.1001,dN$x,1.1001),c(0,k*dN$y/sum(dN$y),0),col=rgb(0,0,1,0.5))
   
   #percentile location
   if (max(TDis)!=0){
@@ -1250,7 +1254,7 @@ SimPlot<-function(PlotTitle,SimilarityObj,legendpos='topleft',verbose=F){
   
   if (df$y.T[CPoint]<(10^-10)){
     Overlap<-0
-    legend(legendpos,legend=c('Observed Similarity','Test Distribution','Null Distribution','0 = Alpha','0 = Beta'),fill=c(NA,rgb(1,0,0,0.5),rgb(0,0,1,0.5),'darkgray','black'),lty=c(1,rep(NA,4)))
+    legend(legendpos,legend=c('Observed Similarity','Test Distribution','Null Distribution','0 = Alpha','0 = Beta'),fill=c(NA,rgb(1,0,0,0.5),rgb(0,0,1,0.5),'darkgray','black'),lty=c(1,rep(NA,4)),density=c(0,NA,NA,NA,NA),border=c(NA,1,1,1,1))
     AlphaValue=0
     BetaValue=0
   } else {
@@ -1261,11 +1265,11 @@ SimPlot<-function(PlotTitle,SimilarityObj,legendpos='topleft',verbose=F){
     BetaValue<-round(TArea/(2-Overlap),2)
     #lines(rep(XPoint,2),c(0,df$y.T[CPoint]))
     #make alpha area
-    polygon(c(dN$x[dN$x<=XPoint],dN$x[dN$x==XPoint]),c(k*dN$y[dN$x<=XPoint]/sum(dN$y),0),col='darkgray')
+    polygon(c(-0.1001,dN$x[dN$x<=XPoint],dN$x[dN$x==XPoint]),c(0,k*dN$y[dN$x<=XPoint]/sum(dN$y),0),col='darkgray')
     #make beta area
-    polygon(c(dT$x[dT$x==XPoint],dT$x[dT$x>=XPoint]),c(0,k*dT$y[dT$x>=XPoint]/sum(dT$y)),col='black')
+    polygon(c(dT$x[dT$x==XPoint],dT$x[dT$x>=XPoint],1.1001),c(0,k*dT$y[dT$x>=XPoint]/sum(dT$y),0),col='black')
     lines(rep(TAct,2),c(0,100),col=1,lwd=3)
-    legend(legendpos,legend=c('Observed Similarity','Test Distribution','Null Distribution',paste0('Alpha=',AlphaValue),paste0('Beta=',BetaValue)),fill=c(NA,rgb(1,0,0,0.5),rgb(0,0,1,0.5),'darkgray','black'),lty=c(1,rep(NA,4)),density=c(0,NA,NA,NA,NA),border=c(NA,1,1,1,1))
+    legend(legendpos,legend=c('Observed Similarity','Test Distribution','Null Distribution',paste0('Alpha=',AlphaValue),paste0('Beta=',BetaValue)),fill=c(NA,rgb(1,0,0,0.5),rgb(0,0,1,0.5),'darkgray','black'),lty=c(1,rep(NA,4)),lwd=c(3,rep(NA,4)),density=c(0,NA,NA,NA,NA),border=c(NA,1,1,1,1))
   }
   
   
