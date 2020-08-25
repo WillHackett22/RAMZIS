@@ -199,6 +199,95 @@ SimDataCleanLog<-function(filename,kmin=2,rel=TRUE,normvector='Default'){
   return(data1)
 }
 
+#SimDataCleanLog that does individual relative abundance
+SimDataCleanLogA<-function(filename,kmin=2,rel=TRUE,normvector='None'){
+  #Read in Data and measure dataframe size
+  if (typeof(filename)=='character'){
+    file1<-read.csv(filename,header=TRUE, row.names=1,stringsAsFactors = FALSE)
+    #normalize based off of normalization vector
+    if (length(normvector)==ncol(file1) ){
+      for (i in 1:ncol(file1)){
+        file1[,i]<-as.numeric(file1[,i])*normvector[i]
+      }
+    } else {
+      if (normvector=='None'){
+        data1<-file1
+      } else if (normvector=='Relative'){
+        for (i in 1:ncol(file1)){
+          file1[,i]<-as.numeric(file1[,i])/sum(as.numeric(file1[,i]),na.rm = T)
+        }
+      }
+    }
+    data1<-file1
+    #standardize data by max abundance 
+    if (rel){
+      for (i in 1:ncol(file1)){
+        data1[,i]<- as.numeric(file1[,i])/max(colSums(file1,na.rm = T))
+      }
+    }
+  } else if(typeof(filename)=='list'){
+    file1<-filename
+    if (length(normvector)==ncol(file1) ){
+      for (i in 1:ncol(file1)){
+        file1[,i]<-as.numeric(file1[,i])*normvector[i]
+      }
+    } else {
+      if (normvector=='None'){
+        data1<-file1
+      } else if (normvector=='Relative'){
+        for (i in 1:ncol(file1)){
+          file1[,i]<-as.numeric(file1[,i])/sum(as.numeric(file1[,i]),na.rm = T)
+        }
+      }
+    }
+    data1<-file1
+    if (rel){
+      for (i in 1:ncol(file1)){
+        data1[,i]<- as.numeric(file1[,i])/max(colSums(file1,na.rm = T))
+      }
+    }
+    
+    #print('Program Detected List for filename. Attempting use as dataframe')
+  }
+  file1[is.na(file1)]<-0
+  data1[is.na(data1)]<-0
+  
+  
+  rown<-dim(file1)[1] #GPs
+  coln<-dim(file1)[2] #samples
+  #Clean Dataframes: remove rows where there are one or fewer signals
+  #number of replicates
+  reps<- coln
+  num<-0
+  #count the missing values in rows
+  mvhold<-rep(0,rown)
+  for (row in 1:rown){
+    rowi<-row-num
+    mvcount<-0
+    #check how many missing values in a given row
+    for (col in 1:coln){
+      for (x in file1[row,col]){
+        if (x==0){
+          mvcount<- mvcount+1
+        }
+      }
+    }
+    mvhold[row]<-mvcount
+  }
+  #turn missing values into observed values
+  remhold<-coln-mvhold
+  #remove data where less than kmin (default=2) are seen
+  if (length(which(remhold<kmin))>0){
+    data1<-data1[-which(remhold<kmin),]
+  }
+  #remove data where mean is lower than logx=-10
+  if (sum(-10>log(apply(data1,1,mean)))>0){
+    data1<-data1[-which(-10>log(apply(data1,1,mean))),]
+  }
+  return(data1)
+}
+
+
 PeptideCollapser<-function(filename,kmin=2,rel=TRUE,sequonvector){
   datfile1<-SimDataClean(filename,kmin,rel)
   #find sequon sections
@@ -244,7 +333,195 @@ GPPresence<-function(dataf,kmin=1,rel=TRUE){
   return(phold)
 }
 
-TheoreticalDataGenerator<-function(n,g,p,w,alp=2,bet=2,maxim=TRUE,w0=2){
+#Modality Test
+Modality<-function(SimDist){
+  SimDens<-density(SimDist)
+  #build sim density distribution
+  LocalMinimaIdx<-which(diff(diff(SimDens$y)<=0)<0)+1
+  LocalMaximaIdx<-which(diff(diff(SimDens$y)>=0)<0)+1
+  #find probable minima and maxima
+  YVar<-var(diff(SimDens$y))
+  #find variance in density differences
+  MinMat<-data.frame(matrix(NA,nrow=length(LocalMaximaIdx),ncol=6))
+  colnames(MinMat)<-c('Peak_x','dPeakLeft','dPeakRight','LeftCheck','RightCheck','Overall')
+  MinMat[,1]<-SimDens$x[LocalMaximaIdx]
+  #Peak Locations
+  MinMat[,2]<-(SimDens$y[LocalMaximaIdx]-c(0,SimDens$y[c(LocalMinimaIdx)]))
+  #Height Differentials before peak
+  MinMat[,3]<-(SimDens$y[LocalMaximaIdx]-c(SimDens$y[c(LocalMinimaIdx)],0))
+  #height differentials after peak
+  MinMat[,4]<-abs(MinMat[,2])<=3*sqrt(YVar)
+  MinMat[,5]<-abs(MinMat[,3])<=3*sqrt(YVar)
+  #chance that the height differentials are by random chance
+  MinMat[,6]<-(sum(MinMat[,4])>0|sum(MinMat[,5])>0)
+  while (sum(MinMat[,6])>0){
+    targeti<-which(rowSums(abs(MinMat[,c(2,3)])==min(abs(MinMat[,c(2,3)])))>0)[1]
+    #find which peaks have the smalles differential, ties go to the first
+    targetl<-which(abs(MinMat[targeti,c(2,3)])==min(abs(MinMat[targeti,c(2,3)])))[1]-2
+    #find whether it is the preceding or secondary trough, ties go to the preceding
+    #if first peak and trough, remove peak and next trough
+    #if last peak and last trough, remove peak and prior trough
+    #else remove peak and lowest trough
+    if (targetl==-1 & targeti==1){
+      LocalMaximaIdx<-LocalMaximaIdx[-targeti]
+      LocalMinimaIdx<-LocalMinimaIdx[-1]
+      #remove peak
+    } else if (targetl==0 & targeti==length(LocalMaximaIdx)){
+      LocalMaximaIdx<-LocalMaximaIdx[-targeti]
+      LocalMinimaIdx<-LocalMinimaIdx[-length(LocalMinimaIdx)]
+      #remove peak
+    } else {
+      LocalMaximaIdx<-LocalMaximaIdx[-targeti]
+      #remove peak
+      tempidx<-targeti+targetl
+      LocalMinimaIdx<-LocalMinimaIdx[-tempidx]
+      #remove lower trough
+    }
+    if (length(LocalMinimaIdx)>0){
+      MinMat<-data.frame(matrix(NA,nrow=length(LocalMaximaIdx),ncol=6))
+      MinMat[,1]<-SimDens$x[LocalMaximaIdx]
+      #Peak Locations
+      MinMat[,2]<-(SimDens$y[LocalMaximaIdx]-c(0,SimDens$y[c(LocalMinimaIdx)]))/(SimDens$x[LocalMaximaIdx]-c(0,SimDens$x[c(LocalMinimaIdx)]))
+      #Height Differentials before peak
+      MinMat[,3]<-(SimDens$y[LocalMaximaIdx]-c(SimDens$y[c(LocalMinimaIdx)],0))/(SimDens$x[LocalMaximaIdx]-c(SimDens$x[c(LocalMinimaIdx)],1))
+      #height differentials after peak
+      MinMat[,4]<-MinMat[,2]<=3*sqrt(YVar)
+      MinMat[,5]<-MinMat[,3]<=3*sqrt(YVar)
+      #chance that the height differentials are by random chance
+      MinMat[,6]<-(sum(MinMat[,4])>0|sum(MinMat[,5])>0)
+    } else {
+      MinMat<-data.frame(matrix(NA,nrow=length(LocalMaximaIdx),ncol=6))
+      MinMat[,1]<-SimDens$x[LocalMaximaIdx]
+      MinMat[,2]<-(SimDens$y[LocalMaximaIdx]-0)/(SimDens$x[LocalMaximaIdx]-0)
+      #Height Differentials before peak
+      MinMat[,3]<-(SimDens$y[LocalMaximaIdx]-0)/(SimDens$x[LocalMaximaIdx]-1)
+      #height differentials after peak
+      MinMat[,4]<-FALSE
+      MinMat[,5]<-FALSE
+      #chance that the height differentials are by random chance
+      MinMat[,6]<-(sum(MinMat[,4])>0|sum(MinMat[,5])>0)
+    }
+    
+    
+  }
+  return(list(MinMat,'Maxima'=LocalMaximaIdx,'Minima'=LocalMinimaIdx))
+}
+
+#membership of Null Distribution
+NullMembershipProportion<-function(SimDist,BootDis1,BootDis2,ModalityList){
+  BootCombinations<-data.frame(matrix(NA,nrow=dim(BootDis1)[1]*dim(BootDis2)[1],ncol=2))
+  BootCombinations[,1]<-rep(seq(1,dim(BootDis1)[1]),each=dim(BootDis2)[1])
+  BootCombinations[,2]<-rep(seq(1,dim(BootDis2)[1]),dim(BootDis1)[1])
+  #make density
+  SimDens<-density(SimDist)
+  #find minima
+  LocalMinimaIdx<-ModalityList$Minima
+  idxL<-length(LocalMinimaIdx)+1
+  LBound<-c(0,SimDens$x[LocalMinimaIdx])
+  UBound<-c(SimDens$x[LocalMinimaIdx],1)
+  #determine the membership of each comparison
+  BootMembers<-data.frame(matrix(NA,nrow=dim(BootDis1)[1]*dim(BootDis2)[1],ncol=dim(BootDis1)[2]+dim(BootDis2)[2]))
+  MemberProp<-data.frame(matrix(NA,nrow=dim(BootCombinations)[1],ncol=3))
+  MemberProp[,1]<-rowSums(BootDis1[BootCombinations[,1],]<=dim(BootDis1)[2])/dim(BootDis1)[2]
+  MemberProp[,2]<-rowSums(BootDis2[BootCombinations[,2],]<=dim(BootDis2)[2])/dim(BootDis2)[2]
+  MemberProp[,3]<-MemberProp[,1]*(1-MemberProp[,2])
+  for (j in 1:dim(BootMembers)[2]){
+    BootMembers[,j]<-rowSums(BootDis1[BootCombinations[,1],]==j)+rowSums(BootDis2[BootCombinations[,2],]==j)
+  }
+  
+  #find members by 
+  Members<-data.frame(matrix(NA,nrow=idxL,ncol=dim(BootDis1)[2]+dim(BootDis2)[2]))
+  MemberPropCount<-data.frame(matrix(NA,nrow=idxL,ncol=length(unique(unlist(MemberProp)))))
+  PropList<-unique(unlist(MemberProp))
+  colnames(MemberPropCount)<-PropList
+  MemberDegree<-data.frame(matrix(NA,nrow=idxL,ncol=ceiling(dim(BootDis1)[2]+dim(BootDis2)[2])/2))
+  colnames(MemberDegree)<-paste0(seq(1,dim(MemberDegree)[2])/dim(MemberDegree)[2])
+  for (j in 1:idxL){
+    Members[j,]<-colSums(BootMembers[which((SimDist>=LBound[j]&SimDist<=UBound[j])),])
+    Origin<-rowSums(BootMembers[which((SimDist>=LBound[j]&SimDist<=UBound[j])),1:dim(MemberDegree)[2]])/(dim(BootDis1)[2]+dim(BootDis2)[2])
+    MemberDegree[j,1]<-sum(Origin<=1/dim(MemberDegree)[2])
+    
+    for (l in 1:dim(MemberPropCount)[2]){
+      MemberPropCount[j,l]<-sum(MemberProp[which((SimDist>=LBound[j]&SimDist<=UBound[j])),]==PropList[l])
+    }
+    for (l in 2:dim(MemberDegree)[2]){
+      MemberDegree[j,l]<-sum(Origin<=(l/dim(MemberDegree)[2])&Origin>((l-1)/dim(MemberDegree)[2]))/(length(Origin)*idxL)
+    }
+  }
+  MemberProp<-t(t(Members)/colSums(Members))
+  return(MemberProp)
+}
+
+#internal Membership
+InternalMembershipProportion<-function(IntDist,BootDis1,ModalityList){
+  BootCombinations<-data.frame(matrix(NA,nrow=dim(BootDis1)[1]*dim(BootDis1)[1],ncol=2))
+  BootCombinations[,1]<-rep(seq(1,dim(BootDis1)[1]),each=dim(BootDis1)[1])
+  BootCombinations[,2]<-rep(seq(1,dim(BootDis1)[1]),dim(BootDis1)[1])
+  BootCombinations<-BootCombinations[-which(BootCombinations[,1]==BootCombinations[,2]),]
+  #make density
+  SimDens<-density(IntDist)
+  #find minima
+  LocalMinimaIdx<-ModalityList$Minima
+  idxL<-length(LocalMinimaIdx)+1
+  LBound<-c(0,SimDens$x[LocalMinimaIdx])
+  UBound<-c(SimDens$x[LocalMinimaIdx],1)
+  #determine the membership of each comparison
+  BootMembers<-data.frame(matrix(NA,nrow=dim(BootCombinations)[1],ncol=dim(BootDis1)[2]))
+  
+  for (j in 1:dim(BootMembers)[2]){
+    BootMembers[,j]<-rowSums(BootDis1[BootCombinations[,1],]==j)+rowSums(BootDis1[BootCombinations[,2],]==j)
+  }
+  MemberProp<-data.frame(matrix(NA,nrow=idxL,ncol=max(BootDis1)))
+  
+  #find members by 
+  
+  Members<-data.frame(matrix(NA,nrow=idxL,ncol=max(BootDis1)))
+  PropList<-paste(seq(1,max(BootDis1)))
+  colnames(Members)<-PropList
+  rownames(Members)<-paste(UBound)
+  for (j in 1:idxL){
+    Members[j,]<-colSums(BootMembers[which((IntDist>=LBound[j]&IntDist<=UBound[j])),])
+  }
+  MemberProp<-t(t(Members)/colSums(Members))
+  return(MemberProp)
+}
+
+#Test Membership
+TestMembershipProportion<-function(SimDist,BootDis1,BootDis2,ModalityList){
+  BootCombinations<-data.frame(matrix(NA,nrow=dim(BootDis1)[1]*dim(BootDis2)[1],ncol=2))
+  BootCombinations[,1]<-rep(seq(1,dim(BootDis1)[1]),each=dim(BootDis2)[1])
+  BootCombinations[,2]<-rep(seq(1,dim(BootDis2)[1]),dim(BootDis1)[1])
+  #make density
+  SimDens<-density(SimDist)
+  #find minima
+  LocalMinimaIdx<-ModalityList$Minima
+  idxL<-length(LocalMinimaIdx)+1
+  LBound<-c(0,SimDens$x[LocalMinimaIdx])
+  UBound<-c(SimDens$x[LocalMinimaIdx],1)
+  #determine the membership of each comparison
+  BootMembers<-data.frame(matrix(NA,nrow=dim(BootDis1)[1]*dim(BootDis2)[1],ncol=dim(BootDis1)[2]+dim(BootDis2)[2]))
+  for (j in 1:dim(BootMembers)[2]){
+    if (j<=dim(BootDis1)[2]){
+      BootMembers[,j]<-rowSums(BootDis1[BootCombinations[,1],]==j)
+    } else{
+      BootMembers[,j]<-rowSums(BootDis2[BootCombinations[,1],]==(j-dim(BootDis1)[2]))
+    }
+  }
+  MemberProp<-data.frame(matrix(NA,nrow=idxL,ncol=max(BootDis1)))
+  
+  
+  Members<-data.frame(matrix(NA,nrow=idxL,ncol=max(BootDis1)))
+  PropList<-paste(seq(1,max(BootDis1)))
+  colnames(Members)<-PropList
+  rownames(Members)<-paste(UBound)
+  for (j in 1:idxL){
+    Members[j,]<-colSums(BootMembers[which((SimDist>=LBound[j]&SimDist<=UBound[j])),])
+  }
+  MemberProp<-t(t(Members)/colSums(Members))
+  return(MemberProp)
+}
+
+TheoreticalDataGenerator<-function(n,g,p,w,alp=2,bet=2,maxim=TRUE,w0=2,w1=10){
   #n samples
   #g identifications
   #p average presence
@@ -275,29 +552,31 @@ TheoreticalDataGenerator<-function(n,g,p,w,alp=2,bet=2,maxim=TRUE,w0=2){
   for (j in 1:g){
     if (length(w)==n & length(w)!=g){
       for (l in 1:n){
-        
+        #make sample variant data
         FractionObj<-MASS:::.rat(round(datavals[j],w0))$rat
-        FractionObj<-FractionObj/(10^(w[l]-6))
+        FractionObj<-FractionObj/(w1^(w[l]-6))
         bet0<-FractionObj[2]-FractionObj[1]
         alp0<-FractionObj[1]
         datagen[j,l]<-rbeta(1,alp0,bet0)
       }
     } else if (length(w)==g) {
+      #make glycopeptide variant data
       FractionObj<-MASS:::.rat(round(datavals[j],w0))$rat
-      FractionObj<-FractionObj/(10^(w[j]-6))
+      FractionObj<-FractionObj/(w1^(w[j]-6))
       bet0<-FractionObj[2]-FractionObj[1]
       alp0<-FractionObj[1]
       datagen[j,]<-rbeta(n,alp0,bet0)
     } else {
+      #make uniform variant data
       FractionObj<-MASS:::.rat(round(datavals[j],w0))$rat
-      FractionObj<-FractionObj/(10^(w[1]-6))
+      FractionObj<-FractionObj/(w1^(w[1]-6))
       bet0<-FractionObj[2]-FractionObj[1]
       alp0<-FractionObj[1]
       datagen[j,]<-rbeta(n,alp0,bet0)
     }
     padj<-p*exp(mean(unlist(datagen[j,])-datmean))
-    padj[padj>=1]<-0.99999
-    padj[padj<=0]<-0.00001
+    padj[padj>=1]<-0.99999999
+    padj[padj<=0]<-0.00000001
     keepnum<-rbinom(1,(n-1),padj)+1
     datagen[j,-match(sample(unlist(datagen[j,]),keepnum),datagen[j,])]<-0
   }
@@ -316,286 +595,11 @@ CombWRep<-function(n,r){
 }
 
 
-#Bootstrap with n less loops
-WithinSimBootstrap2<-function(filename,kmin=2,rel=TRUE,MVCorrection=TRUE,mn=FALSE,bootie=TRUE){
-  # filename is file or matrix: if matrix be sure to normalize first
-  # kmim, rel are simdataclean variables
-  # MVCorrection only to be touched if you don't want to use A*GPPresence(A)
-  # mn leave alone unless you make custom plotting function. delivers all withins rather than summary
-  library('gtools')
-  file1<-SimDataClean(filename,kmin,rel) #open file
-  #acquire all glycopeptides in file
-  glycopep1<-c(row.names(file1)) # list of glycopeptides
-  #set up possible combinations
-  coln<-ncol(file1) # sample num
-  cols<-seq(coln) # list of sample nums
-  Nsmpl<-CombWRep(coln,coln-1) #get number of n-1 samples with replacements
-  combo<-data.frame(matrix(1,nrow=Nsmpl,ncol=(coln-1)))
-  if (bootie){
-    if (coln<8 & 2<coln){
-      combo<-data.frame(gtools::combinations(coln,(coln-1),repeats.allowed = TRUE))
-      rmlist<-c()
-      for (j in 1:coln){
-        rmlist<-c(rmlist,min(which(combo[,1]==j))) #removes first combination of each number which is singularities
-      }
-      combo<-combo[-rmlist,]
-    } else if (coln<=2) {
-      print(paste(filename,' has too few samples. This will not work.'))
-      stop()
-    } else {
-      print('There be a number of samples here. The bootstrap generation will be slower.')
-      combo<-data.frame(matrix(1,nrow=4290,ncol=(coln-1)))
-      for (j in 1:4290){
-        combo[j,]<-sort(sample(coln,(coln-1),replace = TRUE))
-      }
-      combo<-combo[-duplicated(combo),]
-    }
-  } else {
-    combo<-combn(cols,(coln-1))
-  }
-  
-  
-  #jaccard and tanimoto trackers
-  jac1<-rep(0,dim(combo)[1]*coln) # jaccard holder
-  tan1<-rep(0,dim(combo)[1]*coln) # tanimoto holder
-  tan1Final<-rep(0,dim(combo)[1])
-  tanmathold<-data.frame(matrix(data=0,nrow=(dim(combo)[1]*coln) ,ncol=length(glycopep1)))
-  colnames(tanmathold)<-glycopep1
-  tanmatholdW<-data.frame(matrix(data=0,nrow=(dim(combo)[1]*coln) ,ncol=length(glycopep1)))
-  colnames(tanmatholdW)<-glycopep1
-  
-  #iterate through combinations
-  for (j in 1:nrow(combo)){
-    #separate datasets for combinations
-    temp1<-data.frame(file1[,unlist(combo[j,])]) # subset of first data
-    row.names(temp1)<-glycopep1 # GP names
-    
-    temp2<-file1 # subset of non combo data
-    row.names(temp2)<-glycopep1 # GP names
-    
-    #acquire glycopeptides
-    gl1<-row.names(temp1)
-    gl2<-row.names(temp2)
-    #compare for jaccard
-    M11<-sum(gl1 %in% gl2)
-    jac1[((j-1)*coln)]<-M11/length(glycopep1)
-    
-    #turns 0s into NAs if want to reduce impact of missing values
-    if (MVCorrection!=TRUE){
-      temp1[temp1==0]<-NA
-      temp2[temp2==0]<-NA
-    }
-    
-    #generate T10, T01, T1_ and T_1
-    if (ncol(temp1)==1){
-      T1_<-data.frame(matrix(temp1[,1],nrow=length(gl1),ncol=1))
-      row.names(T1_)<-gl1
-      T10<-sum(temp1[,1]^2,na.rm = TRUE)
-    } else {
-      T1_<-data.frame(matrix(rowMeans(temp1,na.rm =TRUE),nrow=length(gl1),ncol=1))
-      row.names(T1_)<-gl1
-      T10<-sum(rowMeans(temp1,na.rm =TRUE)^2)
-    }
-    T_1<-temp2
-    row.names(T_1)<-gl2
-    T01<-colSums(temp2^2,na.rm=TRUE)
-    
-    
-    
-    #Bring T11 related terms together
-    T__Hold<-merge(T1_,T_1,by=0,all=TRUE)
-    row.names(T__Hold)<-T__Hold[,1]
-    T__Hold<-T__Hold[,-1]
-    T__Hold[is.na(T__Hold)]<-0
-    
-    dT<-sqrt((T__Hold[,1]-T__Hold[,-1])^2)
-    
-    PHold1<-data.frame(matrix(0,nrow=length(gl1),ncol=1))
-    row.names(PHold1)<-gl1
-    colnames(PHold1)<-'P1'
-    PHold2<-data.frame(matrix(0,nrow=length(gl2),ncol=coln))
-    row.names(PHold2)<-gl2
-    colnames(PHold2)<-paste0(1:coln)
-    for (m in 1:length(gl1)){
-      nacheck<-1-sum(temp1[gl1[m],]==0)/length(temp1[gl1[m],])
-      if (is.na(nacheck)){
-        nacheck<-0
-      }
-      PHold1[gl1[m],]<-nacheck
-    }
-    for (m in 1:length(gl2)){
-      nacheck<-temp2[gl2[m],]>0
-      nacheck[is.na(nacheck)]<-0
-      PHold2[gl2[m],]<-nacheck
-    }
-    PHold<-merge(PHold1,PHold2,by=0,all=TRUE)
-    row.names(PHold)<-PHold[,1]
-    PHold<-PHold[,-1]
-    PHold[is.na(PHold)]<-0
-    presence<-(PHold[,1]+PHold[,-1])/2
-    if (mn==FALSE){
-      KTerm<-1+presence
-    } else {
-      KTerm<-mn
-    }
-    for (l in 1:coln){
-      T11<-T__Hold[,1]*T__Hold[,2:(coln+1)]*(KTerm^(-dT))
-      TRef<-row.names(T__Hold)
-      for (m in 1:length(TRef)){
-        tanmathold[((j-1)*coln+l),TRef[m]]<-T11[TRef[m],l]
-        tanmatholdW[((j-1)*coln+l),TRef[m]]<-T11[TRef[m],l]/(T10+T01[l]-sum(T11[,l]))
-      }
-      tan1[((j-1)*coln+l)]<-sum(T11[,l])/(T10+T01[l]-sum(T11[,l]))
-    }
-    
-    
-  }
-  
-  Output<-data.frame(matrix(c(jac1,tan1),nrow=nrow(combo)*coln,ncol=2))
-  colnames(Output)<-c('Jaccard','Tanimoto')
-  tanmatendw<-data.frame(matrix(data=0,nrow=(dim(combo)[1]) ,ncol=length(glycopep1)))
-  colnames(tanmatendw)<-glycopep1
-  for (j in 1:dim(combo)[1]){
-    tanmatendw[j,]<-colMeans(tanmatholdW[((j-1)*coln+1):(j*coln),],na.rm=TRUE)
-    tan1Final[j]<-mean(tan1[((j-1)*coln+1):(j*coln)])
-  }
-  TaniOut<-data.frame(matrix(tan1Final,nrow=dim(combo)[1],ncol=1))
-  colnames(TaniOut)<-c('Tanimoto')
-  
-  FinalOut<-list("Summary"=TaniOut,"Hold"=Output,"RankInfo"=tanmathold,"Boot"=combo,'RankInfoW'=tanmatholdW,'RankInfoFinal'=tanmatendw)
-  return(FinalOut)
-}
-
-BetweenSimBootstrap2<-function(filename1,filename2,combo,kmin=2,rel=TRUE,MVCorrection=TRUE,mn=FALSE){
-  #load data and acquire glycopeptides
-  file1<-SimDataClean(filename1,kmin,rel)
-  file2<-SimDataClean(filename2,kmin,rel)
-  glycopep1<-c(row.names(file1))
-  glycopep2<-c(row.names(file2))
-  glycojoint<-unique(c(glycopep1,glycopep2))
-  mergedf<-merge(file1,file2,by=0,all=FALSE)
-  row.names(mergedf)<-mergedf[,1]
-  mergedf<-mergedf[,-1]
-  coln<-dim(file2)[2]
-  
-  jac1<-rep(0,nrow(combo)*coln) # jaccard holder
-  tan1<-rep(0,nrow(combo)*coln) # tanimoto holder
-  tan1Final<-rep(0,dim(combo)[1])
-  coln<-dim(file2)[2]
-  tanmathold<-data.frame(matrix(data=0,nrow=(dim(combo)[1]*coln) ,ncol=length(glycojoint)))
-  colnames(tanmathold)<-glycojoint
-  tanmatholdW<-data.frame(matrix(data=0,nrow=(dim(combo)[1]*coln) ,ncol=length(glycojoint)))
-  colnames(tanmatholdW)<-glycojoint
-  
-  
-  #iterate through all combinations used in within of file 1
-  for (j in 1:nrow(combo)){
-    #separate datasets for combinations
-    temp1<-data.frame(file1[,unlist(combo[j,])]) # subset of first data
-    row.names(temp1)<-glycopep1 # GP names
-    temp2<-file2 # subset of non combo data
-    row.names(temp2)<-glycopep2 # GP names
-    
-    #acquire glycopeptides
-    gl1<-glycopep1
-    gl2<-glycopep2
-    #compare for jaccard
-    M11<-sum(gl1 %in% gl2)
-    jac1[((j-1)*coln)]<-M11/length(glycojoint)
-    
-    #turns 0s into NAs if want to reduce impact of missing values
-    if (MVCorrection!=TRUE){
-      temp1[temp1==0]<-NA
-      temp2[temp2==0]<-NA
-    }
-    
-    #generate T10, T01, T1_ and T_1
-    if (ncol(temp1)==1){
-      T1_<-data.frame(matrix(temp1[,1],nrow=length(gl1),ncol=1))
-      row.names(T1_)<-gl1
-      T10<-sum(temp1[,1]^2,na.rm = TRUE)
-    } else {
-      T1_<-data.frame(matrix(rowMeans(temp1,na.rm =TRUE),nrow=length(gl1),ncol=1))
-      row.names(T1_)<-gl1
-      T10<-sum(rowMeans(temp1,na.rm =TRUE)^2)
-    }
-    T_1<-temp2
-    row.names(T_1)<-gl2
-    T01<-colSums(temp2^2,na.rm=TRUE)
-    
-    
-    
-    #Bring T11 related terms together
-    T__Hold<-merge(T1_,T_1,by=0,all=TRUE)
-    row.names(T__Hold)<-T__Hold[,1]
-    T__Hold<-T__Hold[,-1]
-    T__Hold[is.na(T__Hold)]<-0
-    
-    rowpres<-sum(T1_>0)
-    distMod<-1/sum() #adjusts for presence
-    dT<-sqrt((T__Hold[,1]-T__Hold[,-1])^2)
-    
-    PHold1<-data.frame(matrix(0,nrow=length(gl1),ncol=1))
-    row.names(PHold1)<-gl1
-    colnames(PHold1)<-'P1'
-    PHold2<-data.frame(matrix(0,nrow=length(gl2),ncol=coln))
-    row.names(PHold2)<-gl2
-    colnames(PHold2)<-paste0(1:coln)
-    for (m in 1:length(gl1)){
-      nacheck<-1-sum(temp1[gl1[m],]==0)/length(temp1[gl1[m],])
-      if (is.na(nacheck)){
-        nacheck<-0
-      }
-      PHold1[gl1[m],]<-nacheck
-    }
-    for (m in 1:length(gl2)){
-      nacheck<-temp2[gl2[m],]>0
-      nacheck[is.na(nacheck)]<-0
-      PHold2[gl2[m],]<-nacheck
-    }
-    PHold<-merge(PHold1,PHold2,by=0,all=TRUE)
-    row.names(PHold)<-PHold[,1]
-    PHold<-PHold[,-1]
-    PHold[is.na(PHold)]<-0
-    presence<-(PHold[,1]+PHold[,-1])/2
-    if (mn==FALSE){
-      KTerm<-1+presence
-    } else {
-      KTerm<-mn
-    }
-    for (l in 1:coln){
-      T11<-T__Hold[,1]*T__Hold[,2:(coln+1)]*(KTerm^(-dT))
-      TRef<-row.names(T__Hold)
-      for (m in 1:length(TRef)){
-        tanmathold[((j-1)*coln+l),TRef[m]]<-T11[TRef[m],l]
-        tanmatholdW[((j-1)*coln+l),TRef[m]]<-T11[TRef[m],l]/(T10+T01[l]-sum(T11[,l]))
-      }
-      tan1[((j-1)*coln+l)]<-sum(T11[,l])/(T10+T01[l]-sum(T11[,l]))
-    }
-    
-    
-  }
-  
-  Output<-data.frame(matrix(c(jac1,tan1),nrow=nrow(combo)*coln,ncol=2))
-  colnames(Output)<-c('Jaccard','Tanimoto')
-  tanmatendw<-data.frame(matrix(data=0,nrow=(dim(combo)[1]) ,ncol=length(glycojoint)))
-  colnames(tanmatendw)<-glycojoint
-  for (j in 1:dim(combo)[1]){
-    tanmatendw[j,]<-colMeans(tanmatholdW[((j-1)*coln+1):(j*coln),],na.rm=TRUE)
-    tan1Final[j]<-mean(tan1[((j-1)*coln+1):(j*coln)])
-  }
-  TaniOut<-data.frame(matrix(tan1Final,nrow=dim(combo)[1],ncol=1))
-  colnames(TaniOut)<-c('Tanimoto')
-  
-  FinalOut<-list("Summary"=TaniOut,"Hold"=Output,"RankInfo"=tanmathold,"Boot"=combo,'RankInfoW'=tanmatholdW,'RankInfoFinal'=tanmatendw)
-  return(FinalOut)
-}
-
 ###Preserved Symmetry Comparison
-SymmetricalSimBootstrap<-function(filename1,filename2,kmin=2,rel=TRUE,MVCorrection=TRUE,mn=FALSE,bootie=TRUE,logopt=FALSE){
+SymmetricalSimBootstrap<-function(filename1,filename2,kmin=2,rel=TRUE,MVCorrection=TRUE,mn=FALSE,bootie=TRUE,logopt=FALSE,normvec=c('None','None')){
   #load data and acquire glycopeptides
-  file1<-SimDataCleanLog(filename1,kmin,rel)
-  file2<-SimDataCleanLog(filename2,kmin,rel)
+  file1<-SimDataCleanLogA(filename1,kmin,rel,normvector = normvec[1])
+  file2<-SimDataCleanLogA(filename2,kmin,rel,normvector = normvec[2])
   glycopep1<-c(row.names(file1))
   glycopep2<-c(row.names(file2))
   glycojoint<-unique(c(glycopep1,glycopep2))
@@ -1011,8 +1015,8 @@ SimKLD<-function(TestSim,RefSim,breaks=20){
   return(c(KLD,TestEntropy))
 }
   
-InternalSimilarity<-function(filename,BootSet,kmin=1,rel=TRUE,MVCorrection=TRUE,mn=FALSE,logopt=FALSE){
-  file1<-SimDataCleanLog(filename,kmin,rel)
+InternalSimilarity<-function(filename,BootSet,kmin=1,rel=TRUE,MVCorrection=TRUE,mn=FALSE,logopt=FALSE,normvec=c('None')){
+  file1<-SimDataCleanLogA(filename,kmin,rel,normvector = normvec)
   glycopep1<-c(row.names(file1))
   glycojoint<-glycopep1
   glycopep2<-glycopep1
@@ -1021,6 +1025,7 @@ InternalSimilarity<-function(filename,BootSet,kmin=1,rel=TRUE,MVCorrection=TRUE,
   Nsmpl1<-CombWRep(coln1,coln1-1)
   combo1<-BootSet
   ncomps<-nrow(combo1)*(nrow(combo1)-1)/2
+  comps<-combn(nrow(combo1),2)
   
   jac1<-rep(0,ncomps) # jaccard holder depricated
   tan1<-rep(0,ncomps) # tanimoto holder
@@ -1056,7 +1061,6 @@ InternalSimilarity<-function(filename,BootSet,kmin=1,rel=TRUE,MVCorrection=TRUE,
       PHold1[gl1[m],j]<-nacheck
     }
   }
-  #iterate through all combinations used in within of file 2
   T_1<-T1_
   T01<-T10
   PHold2<-PHold1
@@ -1074,6 +1078,7 @@ InternalSimilarity<-function(filename,BootSet,kmin=1,rel=TRUE,MVCorrection=TRUE,
   ncomb1<-nrow(combo1)
   ncombt<-2*ncomb1
   ncombs<-ncomb1*(ncomb1-1)/2
+  #prevent duplicate comparisons
   tracker1<-0
   ncomb2<-ncomb1-1
   for (j in 1:ncomb2){
@@ -1104,6 +1109,7 @@ InternalSimilarity<-function(filename,BootSet,kmin=1,rel=TRUE,MVCorrection=TRUE,
     for (m in 1:length(TRef)){
       tanmatholdW[TRef[m],(tracker1+1):(tracker1+ncomb1-j)]<-unlist(T11[TRef[m],]/(unlist(T10[j])+T01[-c(1:j)]-colSums(T11,na.rm=T)))
     }
+    #remove possible combinations increment index
     tracker1<-tracker1+ncomb1-j
   }
   tan1<-colSums(tanmatholdW)
@@ -1124,10 +1130,13 @@ InternalQuality<-function(filename,BootSet,SimilarityObj,PlotTitle,GroupName,Int
   k<-100
   #build density
   TDis<-SimilarityObj$Summary$Tanimoto
+  TDis[is.infinite(TDis)]<-NA
   dT<-density(TDis,from=-0.1,to=1.1,na.rm=T)
   NDis<-SimilarityObj$NullOut$NullTani
+  NDis[is.infinite(NDis)]<-NA
   dN<-density(NDis,from=-0.1,to=1.1,na.rm=T)
   IDis<-Int$InternalTanimoto
+  IDis[is.infinite(IDis)]<-NA
   dI<-density(IDis,from=-0.1,to=1.1,na.rm=T)
   TAct<-SimilarityObj$Actual
   #plot densities
@@ -1173,26 +1182,83 @@ InternalQuality<-function(filename,BootSet,SimilarityObj,PlotTitle,GroupName,Int
   
   if (df$y.T[CPoint]<(10^-10)){
     Overlap<-0
+    Alpha<-0
+    Beta<-0
   } else {
     
     #make alpha area
-    polygon(c(-0.1001,dI$x[dI$x<=XPoint],dI$x[dI$x==XPoint]),c(0,k*dI$y[dI$x<=XPoint]/sum(dI$y),0),col='grey')
+    polygon(c(-0.1001,dI$x[dI$x<=XPoint],dI$x[dI$x==XPoint]),c(0,k*dI$y[dI$x<=XPoint]/sum(dI$y),0),col='black')
     #make beta area
-    polygon(c(dT$x[dT$x==XPoint],dT$x[dT$x>=XPoint],1.1001),c(0,k*dT$y[dT$x>=XPoint]/sum(dT$y),0),col='grey')
+    polygon(c(dT$x[dT$x==XPoint],dT$x[dT$x>=XPoint],1.1001),c(0,k*dT$y[dT$x>=XPoint]/sum(dT$y),0),col='darkgrey')
     TArea<-(1-ecdf(TDis)(XPoint))
     IArea<-ecdf(IDis)(XPoint)
     Overlap1<-round(TArea+IArea,2)
     Overlap<-round(100*Overlap1/(2-Overlap1),2)
+    Alpha<-round(TArea/(2-Overlap1),2)
+    Beta<-round(IArea/(2-Overlap1),2)
   }
+  deltaIT<-1+(mean(IDis,na.rm=T)-mean(TDis,na.rm = T))
+  Confidence<-round(deltaIT*log10((k*max(dI$y)/sum(dI$y))/var(IDis,na.rm=T)*10^(-Alpha-Beta)),2)
   
-  
-  
-  legend(legendpos,legend=c('Observed Similarity',paste('Internal of',GroupName),'Test Distribution',paste0(Overlap,'% Overlap of Internal & Test Distributions')),fill=c(NA,3,2,'grey'),lty=c(1,rep(NA,4)),lwd=c(3,NA,NA,NA,NA),density=c(0,NA,NA,NA,NA),border=c(NA,1,1,1,1))
+  legend(legendpos,legend=c(paste('Observed Similarity in the',round(ecdf(TDis)(TAct),2)*100,'Percentile'),paste('Internal of',GroupName,'with Score=',Confidence),'Test Distribution',paste0(Alpha,'= Alpha'),paste0(Beta,'= Beta')),fill=c(NA,3,2,'darkgrey','black'),lty=c(1,rep(NA,4)),lwd=c(3,NA,NA,NA,NA),density=c(0,NA,NA,NA,NA),border=c(NA,1,1,1,1))
   if (verbose==T){
     return(list(Int,Overlap,XPoint,CompPerc,JointPerc))
   }
 
   
+}
+
+
+#ConfidenceScoreZFormat
+
+ConfidenceScore<-function(IntDist,SimDist){
+  IntDens<-density(IntDist,na.rm=T)
+  SimDens<-density(SimDist,na.rm=T)
+  sdI<-sd(IntDist,na.rm=T)
+  ET<-mean(SimDist,na.rm=T)
+  EI<-mean(IntDist,na.rm=T)
+  overlaplist<-Overlap(SimDist,IntDist)
+  dSim<-abs(EI-ET)
+  c<-unname(unlist(overlaplist['PercOverlap']))/100
+  Score<-ScoreUnder(dSim,sdI,c)
+  return(Score)
+}
+
+ScoreUnder<-function(dSim,sdSim,c){
+  Score<-(dSim/sdI)*(1-c)
+  return(Score)
+}
+#Overlap Function
+Overlap<-function(Dis1,Dis2){
+  density1<-density(Dis1,from=-0.1,to=1.1,na.rm=T)
+  density2<-density(Dis2,from=-0.1,to=1.1,na.rm=T)
+  df <- merge(
+    as.data.frame(density1[c("x", "y")]),
+    as.data.frame(density2[c("x", "y")]),
+    by = "x", suffixes = c(".A", ".B")
+  )
+  df$comp <- as.numeric(df$y.A > df$y.B)
+  df$cross <- c(NA, diff(df$comp))
+  tempidx<-which(df$cross!=0)
+  CPoint<-tempidx[which(max(df$y.A[tempidx])==df$y.A[tempidx])]
+  XPoint<-df$x[CPoint]
+  if (length(CPoint)==0){
+    Overlap<-0
+    Alpha<-0
+    Beta<-0
+  } else if (df$y.A[CPoint]<(10^-10)){
+    Overlap<-0
+    Alpha<-0
+    Beta<-0
+  } else {
+    Area1<-(1-ecdf(Dis1)(XPoint))
+    Area2<-ecdf(Dis2)(XPoint)
+    Overlap1<-round(Area1+Area2,2)
+    Overlap<-round(100*Overlap1/(2-Overlap1),2)
+    Alpha<-round(Area1/(2-Overlap1),2)
+    Beta<-round(Area2/(2-Overlap1),2)
+  }
+  return(list('PercOverlap'=Overlap,'Alpha'=Alpha,'Beta'=Beta))
 }
 
 #plots observed, test, null
@@ -1254,22 +1320,23 @@ SimPlot<-function(PlotTitle,SimilarityObj,legendpos='topleft',verbose=F){
   
   if (df$y.T[CPoint]<(10^-10)){
     Overlap<-0
-    legend(legendpos,legend=c('Observed Similarity','Test Distribution','Null Distribution','0 = Alpha','0 = Beta'),fill=c(NA,rgb(1,0,0,0.5),rgb(0,0,1,0.5),'darkgray','black'),lty=c(1,rep(NA,4)),density=c(0,NA,NA,NA,NA),border=c(NA,1,1,1,1))
+    legend(legendpos,legend=c(paste('Observed Similarity in the',round(ecdf(TDis)(TAct),2)*100,'Percentile'),'Test Distribution','Null Distribution','0 = Alpha','0 = Beta'),fill=c(NA,rgb(1,0,0,0.5),rgb(0,0,1,0.5),'darkgray','black'),lty=c(1,rep(NA,4)),density=c(0,NA,NA,NA,NA),border=c(NA,1,1,1,1))
     AlphaValue=0
     BetaValue=0
+    lines(rep(TAct,2),c(0,100),col=1,lwd=3)
   } else {
     TArea<-(1-ecdf(TDis)(XPoint))
     NArea<-ecdf(NDis)(XPoint)
     Overlap<-round(TArea+NArea,2)
-    AlphaValue<-round(NArea/(2-Overlap),2)
-    BetaValue<-round(TArea/(2-Overlap),2)
+    BetaValue<-round(NArea/(2-Overlap),2)
+    AlphaValue<-round(TArea/(2-Overlap),2)
     #lines(rep(XPoint,2),c(0,df$y.T[CPoint]))
     #make alpha area
-    polygon(c(-0.1001,dN$x[dN$x<=XPoint],dN$x[dN$x==XPoint]),c(0,k*dN$y[dN$x<=XPoint]/sum(dN$y),0),col='darkgray')
+    polygon(c(-0.1001,dN$x[dN$x<=XPoint],dN$x[dN$x==XPoint]),c(0,k*dN$y[dN$x<=XPoint]/sum(dN$y),0),col='black')
     #make beta area
-    polygon(c(dT$x[dT$x==XPoint],dT$x[dT$x>=XPoint],1.1001),c(0,k*dT$y[dT$x>=XPoint]/sum(dT$y),0),col='black')
+    polygon(c(dT$x[dT$x==XPoint],dT$x[dT$x>=XPoint],1.1001),c(0,k*dT$y[dT$x>=XPoint]/sum(dT$y),0),col='darkgrey')
     lines(rep(TAct,2),c(0,100),col=1,lwd=3)
-    legend(legendpos,legend=c('Observed Similarity','Test Distribution','Null Distribution',paste0('Alpha=',AlphaValue),paste0('Beta=',BetaValue)),fill=c(NA,rgb(1,0,0,0.5),rgb(0,0,1,0.5),'darkgray','black'),lty=c(1,rep(NA,4)),lwd=c(3,rep(NA,4)),density=c(0,NA,NA,NA,NA),border=c(NA,1,1,1,1))
+    legend(legendpos,legend=c(paste('Observed Similarity in the',round(ecdf(TDis)(TAct),2)*100,'Percentile'),'Test Distribution','Null Distribution',paste0('Beta=',BetaValue),paste0('Alpha=',AlphaValue)),fill=c(NA,rgb(1,0,0,0.5),rgb(0,0,1,0.5),'black','darkgrey'),lty=c(1,rep(NA,4)),lwd=c(3,rep(NA,4)),density=c(0,NA,NA,NA,NA),border=c(NA,1,1,1,1))
   }
   
   
@@ -1311,21 +1378,76 @@ RankSimilarity<-function(RankInfo,PlotTitle){
   return(list('RankOrder'=order(cInfo),'RankInfo'=RankInfo,'RankNames'=colnames(RankInfo)[order(cInfo)]))
 }
 
-RelativeRank<-function(WithinRankObj,BetweenRankObj){
+RelativeRank<-function(SimilarityObj){
   #ranking info used to scale
-  WR<-WithinRankObj$RankInfoFinal
-  BR<-BetweenRankObj$RankInfoFinal
-  WList<-colnames(WR)
-  BList<-colnames(BR)
-  Joint<-intersect(WList,BList)
-  RRank<-data.frame(matrix(0,nrow=dim(WR)[1],ncol=length(Joint)))
-  colnames(RRank)<-Joint
-  for (j in 1:length(Joint)){
-    idnm<-Joint[j]
-    RRank[,idnm]<-BR[,idnm]/WR[,idnm]
+  k<-100
+  #build density
+  GPs<-row.names(SimilarityObj$RankInfoFinal)
+  
+  Output<-data.frame(matrix(NA,nrow=length(GPs),ncol=5))
+  row.names(Output)<-GPs
+  colnames(Output)<-c('Overlap','Alpha','Beta','MeanZ','ActualZ')
+  
+  for (j in 1:length(GPs)){
+    TDis<-SimilarityObj$RankInfoFinal[j,]
+    dT<-density(TDis,from=-0.1,to=1.1,na.rm=T)
+    NDis<-SimilarityObj$NullRankInfoFinal[j,]
+    dN<-density(NDis,from=-0.1,to=1.1,na.rm=T)
+    TAct<-SimilarityObj$RankInfoActual[GPs[j]]
+    #assess
+    if (max(TDis)!=0){
+      CompPerc<-ecdf(TDis)(TAct)
+      JointPerc<-ecdf(NDis)(TAct)
+      CompH<-approx(dT$x,k*dT$y/sum(dT$y),TAct)
+      JointH<-approx(dN$x,k*dN$y/sum(dN$y),TAct)
+      if (is.na(CompH$y)){
+        CompH$y<-0
+      }
+      if (is.na(JointH$y)){
+        JointH$y<-0
+      }
+      df <- merge(
+        as.data.frame(dN[c("x", "y")]),
+        as.data.frame(dT[c("x", "y")]),
+        by = "x", suffixes = c(".T", ".N")
+      )
+      df$comp <- as.numeric(df$y.T > df$y.N)
+      df$cross <- c(NA, diff(df$comp))
+      CPoint<-which(df$cross!=0)[which(max(df$y.T[which(df$cross!=0)])==df$y.T[which(df$cross!=0)])]
+      XPoint<-df$x[CPoint]
+    } else {
+      CPoint<-1
+      df <- merge(
+        as.data.frame(dN[c("x", "y")]),
+        as.data.frame(dT[c("x", "y")]),
+        by = "x", suffixes = c(".T", ".N")
+      )
+      df$Y.T[CPoint]<-0
+    }
+    
+    if (df$y.T[CPoint]<(10^-10)){
+      Overlap<-0
+      AlphaValue=0
+      BetaValue=0
+    } else {
+      TArea<-(1-ecdf(TDis)(XPoint))
+      NArea<-ecdf(NDis)(XPoint)
+      Overlap<-round(TArea+NArea,2)
+      BetaValue<-round(NArea/(2-Overlap),2)
+      AlphaValue<-round(TArea/(2-Overlap),2)
+    }
+    Output[j,1]<-BetaValue+AlphaValue
+    Output[j,2]<-AlphaValue
+    Output[j,3]<-BetaValue
+    
+    Nmean<-mean(NDis,na.rm=T)
+    Nsd<-sd(NDis,na.rm=T)
+    zT<-mean((TDis-Nmean)/Nsd,na.rm=T)
+    Output[j,4]<-zT
+    Output[j,5]<-(TAct-Nmean)/Nsd
   }
-  Sumry<-BetweenRankObj$Summary$Tanimoto/WithinRankObj$Summary$Tanimoto
-  Output<-list("RelRank"=RRank,"WNotInB"=WList[!WList %in% BList],"BNotInW"=BList[!BList %in% WList],"Summary"=Sumry)
+  
+  
   return(Output)
 }
 
