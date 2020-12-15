@@ -41,19 +41,138 @@ remrow <- function(x, rows) x[-rows,, drop = FALSE]
 remcol <- function(x, cols) x[,-cols , drop = FALSE]
 
 #GlycReRead
-GlycReRead<-function(Filelist,NormVector){
-  GFiles<-read.table(Filelist,stringsAsFactors = FALSE)
-  GLen<-dim(GFiles)[1]
+GlycReRead<-function(Filelist,Outfilename=NULL,verbose=T){
+  if (length(Filelist)==1){
+    GFiles<-read.table(Filelist,stringsAsFactors = FALSE)
+    GFiles<-GFiles[,1]
+  } else {
+    GFiles<-Filelist
+  }
+  GLen<-length(GFiles)
   NameHold<-rep(0,GLen)
   HoldTable<-data.frame(matrix(0,nrow = 1,ncol=(GLen+1)))
-  for (j in 1:GLen){
-    FileG<-GFiles[GLen,1]
-    FNameA<-strsplit(FileG,'\\/')[length(strsplit(FileG,'\\/'))]
-    FNameB<-strsplit(FNameA,'\\.csv')[length(strsplit(FNameA,'\\.csv'))]
+  FileG<-GFiles[1]
+  FNameA<-strsplit(FileG,'\\/')[[1]][length(strsplit(FileG,'\\/')[[1]])]
+  FNameB<-strsplit(FNameA,'\\.csv')[[1]][length(strsplit(FNameA,'\\.csv')[[1]])]
+  NameHold[1]<-FNameB
+  GFile<-read.csv(FileG,header=TRUE,stringsAsFactors = FALSE)
+  if (sum(GFile$total_signal==0)>0){
+    GFile<-GFile[-which(GFile$total_signal==0),]
+  }
+  key<-paste(GFile$protein_name,'::',GFile$glycopeptide)
+  abun<-GFile$total_signal
+  tempdata<-data.frame(matrix(nrow=length(key),ncol=1))
+  row.names(tempdata)<-key
+  colnames(tempdata)<-FNameB
+  tempdata[,FNameB]<-abun
+  for (j in 2:GLen){
+    FileG<-GFiles[j]
+    FNameA<-strsplit(FileG,'\\/')[[1]][length(strsplit(FileG,'\\/')[[1]])]
+    FNameB<-strsplit(FNameA,'\\.csv')[[1]][length(strsplit(FNameA,'\\.csv')[[1]])]
     NameHold[j]<-FNameB
-    GFile<-read.table(FileG,header=TRUE,row.names=1,stringsAsFactors = FALSE)
+    GFile<-read.csv(FileG,header=TRUE,stringsAsFactors = FALSE)
+    if (sum(GFile$total_signal==0)>0){
+      GFile<-GFile[-which(GFile$total_signal==0),]
+    }
+    key<-paste(GFile$protein_name,'::',GFile$glycopeptide)
+    abun<-GFile$total_signal
+    tempg<-data.frame(matrix(nrow=length(key),ncol=1))
+    row.names(tempg)<-key
+    colnames(tempg)<-FNameB
+    tempg[,FNameB]<-abun
+    tempdata<-merge(tempdata,tempg,by=0,all = TRUE)
+    row.names(tempdata)<-tempdata[,1]
+    tempdata<-tempdata[,-1]
+  }
+  glyprot<-row.names(tempdata)
+  prot<-vapply(strsplit(glyprot,'::'), `[`, 1, FUN.VALUE=character(1))
+  glypep<-vapply(strsplit(glyprot,'::'), `[`, 2, FUN.VALUE=character(1))
+  uniprot<-unique(prot)
+  outlist<-list('Full'=tempdata)
+  for (j in 1:length(uniprot)){
+    idx<-which(prot==uniprot[j])
+    protdata<-tempdata[idx,]
+    row.names(protdata)<-vapply(strsplit(row.names(protdata),'::'), `[`, 2, FUN.VALUE=character(1))
+    if (!is.null(Outfilename)){
+      name<-strsplit(uniprot[j],"\\|")[[1]][length(strsplit(uniprot[j],"\\|")[[1]])]
+      name<-strsplit(name,' ')[[1]][1]
+      write.csv(protdata,paste0(Outfilename,'_',name,'.csv'))
+    }
+    if (verbose){
+      name<-strsplit(uniprot[j],"\\|")[[1]][length(strsplit(uniprot[j],"\\|")[[1]])]
+      name<-strsplit(name,' ')[[1]][1]
+      
+    }
+  }
+  unigp<-duplicated(glypep)
+  if (sum(unigp)>0){
+    tempdata<-tempdata[-which(unigp),]
+  }
+  gpeprow<-vapply(strsplit(row.names(tempdata),'::'), `[`, 2, FUN.VALUE=character(1))
+  row.names(tempdata)<-gpeprow
+  
+  if (!is.null(Outfilename)){
+    write.csv(tempdata,paste0(Outfilename,'.csv'))
+  }
+  if (verbose){
+    return(tempdata)
   }
 }
+
+#not yet functional
+ByonicRead<-function(Filelist,Outfilename=NULL,verbose=T){
+  print('This function is not yet functional')
+  if (length(Filelist)==1){
+    GFiles<-read.table(Filelist,stringsAsFactors = FALSE)
+    GFiles<-GFiles[,1]
+  } else {
+    GFiles<-Filelist
+  }
+  GLen<-length(GFiles)
+  NameHold<-rep(0,GLen)
+  HoldTable<-data.frame(matrix(0,nrow = 1,ncol=(GLen+1)))
+  FileG<-GFiles[1]
+  FNameA<-strsplit(FileG,'\\/')[[1]][length(strsplit(FileG,'\\/')[[1]])]
+  FNameB<-strsplit(FNameA,'\\.csv')[[1]][length(strsplit(FNameA,'\\.csv')[[1]])]
+  NameHold[1]<-FNameB
+  GFile<-read.csv(FileG,header=TRUE,stringsAsFactors = FALSE)
+  GFile<-GFile[-which(GFile$total_signal==0),]
+  key<-paste(GFile$protein_name,'::',GFile$glycopeptide)
+  abun<-GFile$total_signal
+  tempdata<-data.frame(matrix(nrow=length(key),ncol=1))
+  row.names(tempdata)<-key
+  colnames(tempdata)<-FNameB
+  tempdata[,FNameB]<-abun
+  for (j in 2:GLen){
+    FileG<-GFiles[j]
+    FNameA<-strsplit(FileG,'\\/')[[1]][length(strsplit(FileG,'\\/')[[1]])]
+    FNameB<-strsplit(FNameA,'\\.csv')[[1]][length(strsplit(FNameA,'\\.csv')[[1]])]
+    NameHold[j]<-FNameB
+    GFile<-read.csv(FileG,header=TRUE,stringsAsFactors = FALSE)
+    GFile<-GFile[-which(GFile$total_signal==0),]
+    key<-paste(GFile$protein_name,'::',GFile$glycopeptide)
+    abun<-GFile$total_signal
+    tempg<-data.frame(matrix(nrow=length(key),ncol=1))
+    row.names(tempg)<-key
+    colnames(tempg)<-FNameB
+    tempg[,FNameB]<-abun
+    tempdata<-merge(tempdata,tempg,by=0,all = TRUE)
+    row.names(tempdata)<-tempdata[,1]
+    tempdata<-tempdata[,-1]
+  }
+  glyprot<-row.names(tempdata)
+  prot<-vapply(strsplit(glyprot,'::'), `[`, 1, FUN.VALUE=character(1))
+  glypep<-vapply(strsplit(glyprot,'::'), `[`, 2, FUN.VALUE=character(1))
+  uniprot<-unique(prot)
+  outlist<-list('Full'=tempdata)
+  if (!is.null(Outfilename)){
+    write.csv(tempdata,Outfilename)
+  }
+  if (verbose){
+    return(tempdata)
+  }
+}
+
 
 GlyLineRead<-function(Filelist){}
 
@@ -334,29 +453,40 @@ GPPresence<-function(dataf,kmin=1,rel=TRUE){
 }
 
 #Modality Test
-Modality<-function(SimDist){
+Modality<-function(SimDist,threshold=.01){
   SimDens<-density(SimDist)
   #build sim density distribution
   LocalMinimaIdx<-which(diff(diff(SimDens$y)<=0)<0)+1
   LocalMaximaIdx<-which(diff(diff(SimDens$y)>=0)<0)+1
   #find probable minima and maxima
-  YVar<-var(diff(SimDens$y))
-  #find variance in density differences
-  MinMat<-data.frame(matrix(NA,nrow=length(LocalMaximaIdx),ncol=6))
-  colnames(MinMat)<-c('Peak_x','dPeakLeft','dPeakRight','LeftCheck','RightCheck','Overall')
+  MinMat<-data.frame(matrix(NA,nrow=length(LocalMaximaIdx),ncol=9))
+  colnames(MinMat)<-c('Peak_x','dPeakLeft','dPeakRight','LeftCheck','RightCheck','Overall','N_Members','InterPeakDistance','Peak_y')
   MinMat[,1]<-SimDens$x[LocalMaximaIdx]
+  MinMat[,9]<-SimDens$y[LocalMaximaIdx]
   #Peak Locations
   MinMat[,2]<-(SimDens$y[LocalMaximaIdx]-c(0,SimDens$y[c(LocalMinimaIdx)]))
   #Height Differentials before peak
   MinMat[,3]<-(SimDens$y[LocalMaximaIdx]-c(SimDens$y[c(LocalMinimaIdx)],0))
   #height differentials after peak
-  MinMat[,4]<-abs(MinMat[,2])<=3*sqrt(YVar)
-  MinMat[,5]<-abs(MinMat[,3])<=3*sqrt(YVar)
+  MinMat[,4]<-abs(MinMat[,2])<=threshold*SimDens$y[LocalMaximaIdx]
+  MinMat[,5]<-abs(MinMat[,3])<=threshold*SimDens$y[LocalMaximaIdx]
   #chance that the height differentials are by random chance
+  
+  TempMin<-c(0,SimDens$x[LocalMinimaIdx],1)
+  for (j in 1:length(LocalMaximaIdx)){
+    temppeak<-which(TempMin[j]<=SimDist & SimDist<=TempMin[j+1])
+    MinMat[j,7]<-length(temppeak)
+    #XSD<-sd(SimDist[temppeak])
+    #MinMat[j,8]<-abs(TempMin[j+1]-TempMin[j])<=3*XSD
+    MinMat[j,8]<-FALSE
+  }
   MinMat[,6]<-(sum(MinMat[,4])>0|sum(MinMat[,5])>0)
+  
   while (sum(MinMat[,6])>0){
-    targeti<-which(rowSums(abs(MinMat[,c(2,3)])==min(abs(MinMat[,c(2,3)])))>0)[1]
-    #find which peaks have the smalles differential, ties go to the first
+    rowpick<-which(MinMat[,4]|MinMat[,5])
+    targeti<-which(rowSums(abs(MinMat[rowpick,c(2,3)])==min(abs(MinMat[rowpick,c(2,3)])))>0)[1]
+    targeti<-rowpick[targeti]
+    #find which peaks have the smallest differential, ties go to the first
     targetl<-which(abs(MinMat[targeti,c(2,3)])==min(abs(MinMat[targeti,c(2,3)])))[1]-2
     #find whether it is the preceding or secondary trough, ties go to the preceding
     #if first peak and trough, remove peak and next trough
@@ -378,27 +508,50 @@ Modality<-function(SimDist){
       #remove lower trough
     }
     if (length(LocalMinimaIdx)>0){
-      MinMat<-data.frame(matrix(NA,nrow=length(LocalMaximaIdx),ncol=6))
+      MinMat<-data.frame(matrix(NA,nrow=length(LocalMaximaIdx),ncol=9))
+      colnames(MinMat)<-c('Peak_x','dPeakLeft','dPeakRight','LeftCheck','RightCheck','Overall','N_Members','InterPeakDistance','Peak_y')
       MinMat[,1]<-SimDens$x[LocalMaximaIdx]
+      MinMat[,9]<-SimDens$y[LocalMaximaIdx]
       #Peak Locations
-      MinMat[,2]<-(SimDens$y[LocalMaximaIdx]-c(0,SimDens$y[c(LocalMinimaIdx)]))/(SimDens$x[LocalMaximaIdx]-c(0,SimDens$x[c(LocalMinimaIdx)]))
+      MinMat[,2]<-(SimDens$y[LocalMaximaIdx]-c(0,SimDens$y[c(LocalMinimaIdx)]))
       #Height Differentials before peak
-      MinMat[,3]<-(SimDens$y[LocalMaximaIdx]-c(SimDens$y[c(LocalMinimaIdx)],0))/(SimDens$x[LocalMaximaIdx]-c(SimDens$x[c(LocalMinimaIdx)],1))
+      MinMat[,3]<-(SimDens$y[LocalMaximaIdx]-c(SimDens$y[c(LocalMinimaIdx)],0))
       #height differentials after peak
-      MinMat[,4]<-MinMat[,2]<=3*sqrt(YVar)
-      MinMat[,5]<-MinMat[,3]<=3*sqrt(YVar)
+      MinMat[,4]<-abs(MinMat[,2])<=threshold*SimDens$y[LocalMaximaIdx]
+      MinMat[,5]<-abs(MinMat[,3])<=threshold*SimDens$y[LocalMaximaIdx]
       #chance that the height differentials are by random chance
+      
+      TempMin<-c(0,SimDens$x[LocalMinimaIdx],1)
+      for (j in 1:length(LocalMaximaIdx)){
+        temppeak<-which(TempMin[j]<=SimDist & SimDist<=TempMin[j+1])
+        MinMat[j,7]<-length(temppeak)
+        #XSD<-sd(SimDist[temppeak])
+        #MinMat[j,8]<-abs(TempMin[j+1]-TempMin[j])<=3*XSD
+        MinMat[j,8]<-FALSE
+      }
       MinMat[,6]<-(sum(MinMat[,4])>0|sum(MinMat[,5])>0)
     } else {
-      MinMat<-data.frame(matrix(NA,nrow=length(LocalMaximaIdx),ncol=6))
+      MinMat<-data.frame(matrix(NA,nrow=length(LocalMaximaIdx),ncol=9))
+      colnames(MinMat)<-c('Peak_x','dPeakLeft','dPeakRight','LeftCheck','RightCheck','Overall','N_Members','InterPeakDistance','Peak_y')
       MinMat[,1]<-SimDens$x[LocalMaximaIdx]
-      MinMat[,2]<-(SimDens$y[LocalMaximaIdx]-0)/(SimDens$x[LocalMaximaIdx]-0)
+      MinMat[,9]<-SimDens$y[LocalMaximaIdx]
+      #Peak Locations
+      MinMat[,2]<-(SimDens$y[LocalMaximaIdx]-c(0,SimDens$y[c(LocalMinimaIdx)]))
       #Height Differentials before peak
-      MinMat[,3]<-(SimDens$y[LocalMaximaIdx]-0)/(SimDens$x[LocalMaximaIdx]-1)
+      MinMat[,3]<-(SimDens$y[LocalMaximaIdx]-c(SimDens$y[c(LocalMinimaIdx)],0))
       #height differentials after peak
       MinMat[,4]<-FALSE
       MinMat[,5]<-FALSE
       #chance that the height differentials are by random chance
+      
+      TempMin<-c(0,SimDens$x[LocalMinimaIdx],1)
+      for (j in 1:length(LocalMaximaIdx)){
+        temppeak<-which(TempMin[j]<=SimDist & SimDist<=TempMin[j+1])
+        MinMat[j,7]<-length(temppeak)
+        #XSD<-sd(SimDist[temppeak])
+        #MinMat[j,8]<-abs(TempMin[j+1]-TempMin[j])<=3*XSD
+        MinMat[j,8]<-FALSE
+      }
       MinMat[,6]<-(sum(MinMat[,4])>0|sum(MinMat[,5])>0)
     }
     
@@ -458,6 +611,7 @@ InternalMembershipProportion<-function(IntDist,BootDis1,ModalityList){
   BootCombinations[,1]<-rep(seq(1,dim(BootDis1)[1]),each=dim(BootDis1)[1])
   BootCombinations[,2]<-rep(seq(1,dim(BootDis1)[1]),dim(BootDis1)[1])
   BootCombinations<-BootCombinations[-which(BootCombinations[,1]==BootCombinations[,2]),]
+  
   #make density
   SimDens<-density(IntDist)
   #find minima
@@ -519,6 +673,182 @@ TestMembershipProportion<-function(SimDist,BootDis1,BootDis2,ModalityList){
   }
   MemberProp<-t(t(Members)/colSums(Members))
   return(MemberProp)
+}
+
+#ModalityTest
+ModalityTest<-function(SimObject,IntObject1,IntObject2){
+  #SimMode<-Modality(SimObject$Summary$Tanimoto)
+  #gather modality data
+  #NullMode<-Modality(SimObject$NullOut$NullTani)
+  Int1Mode<-Modality(IntObject1$InternalTanimoto)
+  Int2Mode<-Modality(IntObject2$InternalTanimoto)
+  #gather proportion data
+  #TMP<-TestMembershipProportion(SimObject$Summary$Tanimoto,SimObject$Boot[[1]],SimObject$Boot[[2]],SimMode)
+  #NMP<-NullMembershipProportion(SimObject$NullOut$NullTani,SimObject$Boot[[3]],SimObject$Boot[[4]],NullMode)
+  IMP1<-InternalMembershipProportion(IntObject1$InternalTanimoto,SimObject$Boot[[1]],Int1Mode)
+  IMP2<-InternalMembershipProportion(IntObject2$InternalTanimoto,SimObject$Boot[[2]],Int2Mode)
+  #TZ<-ModalityZ(SimMode,TMP)
+  #NZ<-ModalityZ(NullMode,NMP)
+  TZ<-NULL
+  NZ<-NULL
+  IZ1<-ModalityZ(Int1Mode,IMP1)
+  IZ2<-ModalityZ(Int2Mode,IMP2)
+  RejectList<-list('Test'=TZ,'Null'=NZ,'Int1'=IZ1,'Int2'=IZ2)
+  return(RejectList)
+}
+
+ModalityInterpreter<-function(RejectList,IntObject1,Mode1,IntObject2,Mode2,SimObject=NULL){
+  Int1Out<-NULL
+  Int2Out<-NULL
+  if (!is.null(RejectList$Int1)){
+    PrimaryPeak1<-Mode1[[1]]$Peak_x[which(Mode1[[1]]$N_Members==max(Mode1[[1]]$N_Members))]
+    for (j in 1:length(RejectList$Int1)){
+      if (!is.null(RejectList$Int1[[j]])){
+        for (l in 1:dim(RejectList$Int1[[j]])[2]){
+          if ((RejectList$Int1[[j]][1,l]==PrimaryPeak1 & RejectList$Int1[[j]][2,l]<0)|(RejectList$Int1[[j]][1,l]!=PrimaryPeak1 & RejectList$Int1[[j]][2,l]>0)){
+            Int1Out<-c(Int1Out,j)
+          }
+        }
+      }
+    }
+  }
+  if (!is.null(RejectList$Int2)){
+    PrimaryPeak2<-Mode2[[1]]$Peak_x[which(Mode2[[1]]$N_Members==max(Mode2[[1]]$N_Members))]
+    for (j in 1:length(RejectList$Int2)){
+      if (!is.null(RejectList$Int2[[j]])){
+        for (l in 1:dim(RejectList$Int2[[j]])[2]){
+          if ((RejectList$Int2[[j]][1,l]==PrimaryPeak2 & RejectList$Int2[[j]][2,l]<0)|(RejectList$Int2[[j]][1,l]!=PrimaryPeak2 & RejectList$Int2[[j]][2,l]>0)){
+            Int2Out<-c(Int2Out,j)
+          }
+        }
+      }
+    }
+  }
+  if (!is.null(Int1Out)){
+    Int1Out<-unique(Int1Out)
+  }
+  if (!is.null(Int2Out)){
+    Int2Out<-unique(Int2Out)
+  }
+  if (verbose){
+    print('Due to over-representation in non-primary peaks, dataset 1 should see the removal of replicates:')
+    print(Int1Out)
+    print('Due to over-representation in non-primary peaks, dataset 2 should see the removal of replicates:')
+    print(Int2Out)
+  }
+  return(list(Int1Out,Int2Out))
+  
+}
+
+#Modality ZScore
+ModalityZ<-function(ModeObject,PropObject,npercent=.1){
+  samples<-dim(PropObject)[2]
+  PIdx<-which(ModeObject[[1]]$N_Members>=npercent*sum(ModeObject[[1]]$N_Members))
+  reject<-list()
+  if (dim(PropObject)[1]>1){
+    if (length(PIdx)>1){
+      for (j in 1:samples){
+        xMN<-apply(PropObject[PIdx,-j]/rowSums(PropObject[PIdx,-j]),1,mean)
+        xSD<-apply(PropObject[PIdx,-j]/rowSums(PropObject[PIdx,-j]),1,sd)
+        xZ<-(PropObject[PIdx,j]/rowSums(PropObject[PIdx,-j])-xMN)/xSD
+        if (any(abs(xZ)>=3)){
+          zidx<-which(abs(xZ)>=3)
+          ztemp<-matrix(nrow=2,ncol=length(zidx))
+          ztemp[2,]<-xZ[zidx]
+          ztemp[1,]<-ModeObject[[1]][PIdx,"Peak_x"][zidx]
+          reject[[j]]<-ztemp
+        }
+      }
+    } else {
+      for (j in 1:samples){
+        xMN<-mean(PropObject[PIdx,-j]/sum(PropObject[PIdx,-j]))
+        xSD<-sd(PropObject[PIdx,-j]/sum(PropObject[PIdx,-j]))
+        xZ<-(PropObject[PIdx,j]/sum(PropObject[PIdx,-j])-xMN)/xSD
+        if (any(abs(xZ)>=3)){
+          zidx<-which(abs(xZ)>=3)
+          ztemp<-matrix(nrow=2,ncol=length(zidx))
+          ztemp[2,]<-xZ[zidx]
+          ztemp[1,]<-ModeObject[[1]][PIdx,'Peak_x'][zidx]
+          reject[[j]]<-ztemp
+        }
+      }
+    } 
+  }
+  if (length(reject)>0){
+    return(reject)
+  } else {
+    return(NULL)
+  }
+}
+
+#Modality ZScore Subset
+ModalityZSubset<-function(ModeObject,PropObject,npercent=.1){
+  samples<-dim(PropObject)[2]
+  PIdx<-which(ModeObject[[1]]$N_Members>=npercent*sum(ModeObject[[1]]$N_Members))
+  reject<-list()
+  i<-1
+  if ((samples-2)>=2){
+    mMax<-samples-2
+    mseq<-mMax:2
+  }
+  
+  if (dim(PropObject)[1]>1){
+    if (length(PIdx)>1){
+      for (l in 1:length(mseq)){
+        subsets<-combn(samples,mseq[l])
+        slen<-dim(subsets)[2]
+        for (j in 1:slen){
+          sub<-subsets[,j]
+          xMN<-apply(PropObject[PIdx,-sub]/rowSums(PropObject[PIdx,-sub]),1,mean)
+          xSD<-apply(PropObject[PIdx,-sub]/rowSums(PropObject[PIdx,-sub]),1,sd)
+          xZ<-(PropObject[PIdx,sub]/rowSums(PropObject[PIdx,-sub])-xMN)/xSD
+          if (any(abs(xZ)>=3)){
+            if (any(rowSums(abs(xZ)>=3)==length(sub))){
+              zidx<-which(rowSums(abs(xZ)>=3)==length(sub))
+              ztemp<-matrix(nrow=2,ncol=length(zidx))
+              ztemp[2,]<-xZ[zidx]
+              ztemp[1,]<-ModeObject[[1]][PIdx,"Peak_x"][zidx]
+              reject[[i]]<-list()
+              reject[[i]][[1]]<-as.data.frame(ztemp)
+              reject[[i]][[2]]<-sub
+              i<-i+1
+            }
+            
+          }
+        }
+      }
+      
+    } else {
+      for (l in 1:length(mseq)){
+        subsets<-combn(samples,mseq[l])
+        slen<-dim(subsets)[2]
+        for (j in 1:slen){
+          sub<-subsets[,j]
+          xMN<-mean(PropObject[PIdx,-sub]/sum(PropObject[PIdx,-sub]),na.rm=T)
+          xSD<-sd(PropObject[PIdx,-sub]/sum(PropObject[PIdx,-sub]),na.rm=T)
+          xZ<-(PropObject[PIdx,sub]/sum(PropObject[PIdx,-sub])-xMN)/xSD
+          if (any(abs(xZ)>=3)){
+            if (any(rowSums(abs(xZ)>=3)==length(sub))){
+              zidx<-which(rowSums(abs(xZ)>=3)==length(sub))
+              ztemp<-matrix(nrow=2,ncol=length(zidx))
+              ztemp[2,]<-xZ[zidx]
+              ztemp[1,]<-ModeObject[[1]][PIdx,"Peak_x"][zidx]
+              reject[[i]]<-list()
+              reject[[i]][[1]]<-as.data.frame(ztemp)
+              reject[[i]][[2]]<-sub
+              i<-i+1
+            }
+            
+          }
+        }
+      }
+    } 
+  }
+  if (length(reject)>0){
+    return(reject)
+  } else {
+    return(NULL)
+  }
 }
 
 TheoreticalDataGenerator<-function(n,g,p,w,alp=2,bet=2,maxim=TRUE,w0=2,w1=10){
@@ -613,6 +943,33 @@ SymmetricalSimBootstrap<-function(filename1,filename2,kmin=2,rel=TRUE,MVCorrecti
   
   Nsmpl2<-CombWRep(coln2,coln2)
   Nsmpl1<-CombWRep(coln1,coln1)
+
+  if (((coln1-2)>1) & ((coln1-2)<20)){
+    cmseq<-(coln1-2):2
+    cm1fact<-sum(factorial(coln1)/(factorial(cmseq)*factorial(coln1-cmseq)))
+    MandatoryCombinations1<-matrix(NA,nrow = cm1fact,ncol=coln1)
+    jdx<-1
+    kdx<-0
+    for (j in 1:length(cmseq)){
+      kdx<-kdx+(factorial(coln1)/(factorial(cmseq[j])*factorial(coln1-cmseq[j])))
+      MandatoryCombinations1[jdx:kdx,1:cmseq[j]]<-t(combn(coln1,cmseq[j]))
+      MandatoryCombinations1[jdx:kdx,(cmseq[j]+1):coln1]<-t(apply(t(combn(coln1,cmseq[j])),1,sample,size=coln1-cmseq[j],replace=T))
+      jdx<-kdx+1
+    }
+  }
+  if (((coln2-2)>1) & ((coln2-2)<20)){
+    cmseq<-(coln2-2):2
+    cm2fact<-sum(factorial(coln2)/(factorial(cmseq)*factorial(coln2-cmseq)))
+    MandatoryCombinations2<-matrix(NA,nrow = cm2fact,ncol=coln2)
+    jdx<-1
+    kdx<-0
+    for (j in 1:length(cmseq)){
+      kdx<-kdx+(factorial(coln2)/(factorial(cmseq[j])*factorial(coln2-cmseq[j])))
+      MandatoryCombinations2[jdx:kdx,1:cmseq[j]]<-t(combn(coln2,cmseq[j]))
+      MandatoryCombinations2[jdx:kdx,(cmseq[j]+1):coln2]<-t(apply(t(combn(coln2,cmseq[j])),1,sample,size=coln2-cmseq[j],replace=T))
+      jdx<-kdx+1
+    }
+  }
   
   if (bootie){
     if (coln1<6 & 2<coln1){
@@ -633,7 +990,7 @@ SymmetricalSimBootstrap<-function(filename1,filename2,kmin=2,rel=TRUE,MVCorrecti
       }
       
     }
-    if (coln2<5 & 2<coln2){
+    if (coln2<6 & 2<coln2){
       Nsmpl2<-CombWRep(coln2,coln2)
       combo2<-data.frame(matrix(1,nrow=Nsmpl2,ncol=(coln2)))
       combo2<-data.frame(gtools::combinations(coln2,(coln2),repeats.allowed = TRUE))
@@ -1120,7 +1477,7 @@ InternalSimilarity<-function(filename,BootSet,kmin=1,rel=TRUE,MVCorrection=TRUE,
 }
 
 #plots internal boot object[[]]: 1 is the first
-InternalQuality<-function(filename,BootSet,SimilarityObj,PlotTitle,GroupName,Int=NULL,kmin=2,rel=TRUE,MVCorrection=TRUE,mn=FALSE,verbose=FALSE,legendpos='topleft'){
+InternalQuality<-function(filename,BootSet,SimilarityObj,PlotTitle,GroupName,Int=NULL,kmin=2,rel=TRUE,MVCorrection=TRUE,mn=FALSE,verbose=FALSE,legendpos='topleft',legendval=FALSE,xbound=c(0,1)){
   if (!is.null(Int)){
     #Use Int as Int object
   } else {
@@ -1139,6 +1496,7 @@ InternalQuality<-function(filename,BootSet,SimilarityObj,PlotTitle,GroupName,Int
   IDis[is.infinite(IDis)]<-NA
   dI<-density(IDis,from=-0.1,to=1.1,na.rm=T)
   TAct<-SimilarityObj$Actual
+  OverlapData<-OverlapCalculator(IDis,TDis)
   #plot densities
   if (max(TDis)==0){
     mh<-max(c(k*dI$y/sum(dI$y)))
@@ -1146,7 +1504,7 @@ InternalQuality<-function(filename,BootSet,SimilarityObj,PlotTitle,GroupName,Int
     polygon(c(0,0,0.1,0.1),c(0,mh,mh,0),col=rgb(1,0,0,0.5))
   } else {
     mh<-max(c(k*dT$y/sum(dT$y),k*dI$y/sum(dI$y)))
-    plot(dT$x,k*dT$y/sum(dT$y),xlim=c(0,1),ylim=c(0,mh),main=PlotTitle,type='l',xlab='Similarity',ylab='% of Distribution')
+    plot(dT$x,k*dT$y/sum(dT$y),ylim=c(0,mh),main=PlotTitle,type='l',xlab='Similarity',ylab='% of Distribution',xlim=xbound)
     polygon(c(-0.1001,dT$x,1.1001),c(0,k*dT$y/sum(dT$y),0),col=rgb(1,0,0,0.5))
   }
   #lines(dN$x,k*dN$y/sum(dN$y))
@@ -1199,8 +1557,9 @@ InternalQuality<-function(filename,BootSet,SimilarityObj,PlotTitle,GroupName,Int
   }
   deltaIT<-1+(mean(IDis,na.rm=T)-mean(TDis,na.rm = T))
   Confidence<-round(deltaIT*log10((k*max(dI$y)/sum(dI$y))/var(IDis,na.rm=T)*10^(-Alpha-Beta)),2)
-  
-  legend(legendpos,legend=c(paste('Observed Similarity in the',round(ecdf(TDis)(TAct),2)*100,'Percentile'),paste('Internal of',GroupName,'with Score=',Confidence),'Test Distribution',paste0(Alpha,'= Alpha'),paste0(Beta,'= Beta')),fill=c(NA,3,2,'darkgrey','black'),lty=c(1,rep(NA,4)),lwd=c(3,NA,NA,NA,NA),density=c(0,NA,NA,NA,NA),border=c(NA,1,1,1,1))
+  if (legendval){
+    legend(legendpos,legend=c(paste('Observed Similarity in the',round(ecdf(TDis)(TAct),2)*100,'Percentile'),paste('Internal of',GroupName,'with Score=',Confidence),'Test Distribution',paste0(Alpha*100,'% False Positive Rate'),paste0(Beta*100,'% False Negative Rate')),fill=c(NA,3,2,'darkgrey','black'),lty=c(1,rep(NA,4)),lwd=c(3,NA,NA,NA,NA),density=c(0,NA,NA,NA,NA),border=c(NA,1,1,1,1))
+  }
   if (verbose==T){
     return(list(Int,Overlap,XPoint,CompPerc,JointPerc))
   }
@@ -1263,85 +1622,64 @@ Overlap<-function(Dis1,Dis2){
 
 #plots observed, test, null
 
-SimPlot<-function(PlotTitle,SimilarityObj,legendpos='topleft',verbose=F){
+SimPlot<-function(PlotTitle,SimilarityObj,legendpos='topleft',verbose=F,legendval=FALSE,xbound=c(0,1)){
   k<-100
   #build density
   TDis<-SimilarityObj$Summary$Tanimoto
   dT<-density(TDis,from=-0.1,to=1.1,na.rm=T)
+  sdTy<-k*dT$y/sum(dT$y)
+  
   NDis<-SimilarityObj$NullOut$NullTani
   dN<-density(NDis,from=-0.1,to=1.1,na.rm=T)
+  sdNy<-k*dN$y/sum(dN$y)
+  
   TAct<-SimilarityObj$Actual
+  
+  OverlapData<-OverlapCalculator(SimilarityObj$NullOut$NullTani,SimilarityObj$Summary$Tanimoto)
   #plot densities
   if (max(TDis)==0){
-    mh<-max(c(k*dN$y/sum(dN$y)))
+    mh<-max(sdNy)
     plot(c(0,0,0.05,0.05),c(0,mh,mh,0),xlim=c(0,1),ylim=c(0,mh),main=PlotTitle,type='l',xlab='Similarity',ylab='Density')
     polygon(c(0,0,0.05,0.05),c(0,mh,mh,0),col=rgb(1,0,0,0.5))
   } else {
-    mh<-max(c(k*dT$y/sum(dT$y),k*dN$y/sum(dN$y)))
-    plot(dT$x,k*dT$y/sum(dT$y),xlim=c(0,1),ylim=c(0,mh),main=PlotTitle,type='l',xlab='Similarity',ylab='Density')
-    polygon(c(-0.1001,dT$x,1.1001),c(0,k*dT$y/sum(dT$y),0),col=rgb(1,0,0,0.5))
+    mh<-max(c(sdNy,sdTy))
+    plot(dT$x,sdTy,xlim=xbound,ylim=c(0,mh),main=PlotTitle,type='l',xlab='Similarity',ylab='Density')
+    polygon(c(-0.1001,dT$x,1.1001),c(0,sdTy,0),col=rgb(1,0,0,0.5))
   }
-  lines(dN$x,k*dN$y/sum(dN$y))
-  polygon(c(-0.1001,dN$x,1.1001),c(0,k*dN$y/sum(dN$y),0),col=rgb(0,0,1,0.5))
+  lines(dN$x,sdNy)
+  polygon(c(-0.1001,dN$x,1.1001),c(0,sdNy,0),col=rgb(0,0,1,0.5))
+  lines(rep(TAct,2),c(0,100),col=1,lwd=3)
+  
   
   #percentile location
-  if (max(TDis)!=0){
-    CompPerc<-ecdf(TDis)(TAct)
-    JointPerc<-ecdf(NDis)(TAct)
-    CompH<-approx(dT$x,k*dT$y/sum(dT$y),TAct)
-    JointH<-approx(dN$x,k*dN$y/sum(dN$y),TAct)
-    if (is.na(CompH$y)){
-      CompH$y<-0
-    }
-    if (is.na(JointH$y)){
-      JointH$y<-0
-    }
-    # text(TAct,CompH$y,labels = paste0(round(k*CompPerc,2),'% of Test'),pos=4)
-    # text(TAct,JointH$y,labels = paste0(round(k*JointPerc,2),'% of Null'),pos=2)
-    #coverage overlap
-    df <- merge(
-      as.data.frame(dN[c("x", "y")]),
-      as.data.frame(dT[c("x", "y")]),
-      by = "x", suffixes = c(".T", ".N")
-    )
-    df$comp <- as.numeric(df$y.T > df$y.N)
-    df$cross <- c(NA, diff(df$comp))
-    CPoint<-which(df$cross!=0)[which(max(df$y.T[which(df$cross!=0)])==df$y.T[which(df$cross!=0)])]
-    XPoint<-df$x[CPoint]
-  } else {
-    CPoint<-1
-    df <- merge(
-      as.data.frame(dN[c("x", "y")]),
-      as.data.frame(dT[c("x", "y")]),
-      by = "x", suffixes = c(".T", ".N")
-    )
-    df$Y.T[CPoint]<-0
+  Overlap<-OverlapData$OverlapPerc
+  AlphaValue<-OverlapData$FP
+  BetaValue<-OverlapData$FN
+  if (legendval){
+    legend(legendpos,legend=c(paste('Observed Similarity in the',round(ecdf(TDis)(TAct),2)*100,'Percentile'),'Test Distribution','Null Distribution',paste0(round(AlphaValue,3)*100,'% False Positive Rate'),paste0(round(BetaValue,3)*100,'% False Negative Rate')),fill=c(NA,rgb(1,0,0,0.5),rgb(0,0,1,0.5),'darkgray','black'),lty=c(1,rep(NA,4)),density=c(0,NA,NA,NA,NA),border=c(NA,1,1,1,1))
   }
   
-  if (df$y.T[CPoint]<(10^-10)){
-    Overlap<-0
-    legend(legendpos,legend=c(paste('Observed Similarity in the',round(ecdf(TDis)(TAct),2)*100,'Percentile'),'Test Distribution','Null Distribution','0 = Alpha','0 = Beta'),fill=c(NA,rgb(1,0,0,0.5),rgb(0,0,1,0.5),'darkgray','black'),lty=c(1,rep(NA,4)),density=c(0,NA,NA,NA,NA),border=c(NA,1,1,1,1))
-    AlphaValue=0
-    BetaValue=0
-    lines(rep(TAct,2),c(0,100),col=1,lwd=3)
-  } else {
-    TArea<-(1-ecdf(TDis)(XPoint))
-    NArea<-ecdf(NDis)(XPoint)
-    Overlap<-round(TArea+NArea,2)
-    BetaValue<-round(NArea/(2-Overlap),2)
-    AlphaValue<-round(TArea/(2-Overlap),2)
-    #lines(rep(XPoint,2),c(0,df$y.T[CPoint]))
+  if (AlphaValue>(10^-10)){
     #make alpha area
-    polygon(c(-0.1001,dN$x[dN$x<=XPoint],dN$x[dN$x==XPoint]),c(0,k*dN$y[dN$x<=XPoint]/sum(dN$y),0),col='black')
-    #make beta area
-    polygon(c(dT$x[dT$x==XPoint],dT$x[dT$x>=XPoint],1.1001),c(0,k*dT$y[dT$x>=XPoint]/sum(dT$y),0),col='darkgrey')
-    lines(rep(TAct,2),c(0,100),col=1,lwd=3)
-    legend(legendpos,legend=c(paste('Observed Similarity in the',round(ecdf(TDis)(TAct),2)*100,'Percentile'),'Test Distribution','Null Distribution',paste0('Beta=',BetaValue),paste0('Alpha=',AlphaValue)),fill=c(NA,rgb(1,0,0,0.5),rgb(0,0,1,0.5),'black','darkgrey'),lty=c(1,rep(NA,4)),lwd=c(3,rep(NA,4)),density=c(0,NA,NA,NA,NA),border=c(NA,1,1,1,1))
+    for (j in 1:(length(OverlapData$FPi)/2)){
+      jdxh<-j*2
+      jdxl<-(j-1)*2+1
+      fpi<-seq(OverlapData$FPi[jdxl],OverlapData$FPi[jdxh])
+      polygon(c(dT$x[fpi[1]],dT$x[fpi],dT$x[fpi[length(fpi)]]),c(0,sdTy[fpi],0),col='black')
+    }
   }
-  
+  if (BetaValue>(10^-10)){
+    #make beta area
+    for (j in 1:(length(OverlapData$FNi)/2)){
+      jdxh<-j*2
+      jdxl<-(j-1)*2+1
+      fni<-seq(OverlapData$FNi[jdxl],OverlapData$FNi[jdxh])
+      polygon(c(dN$x[fni[1]],dN$x[fni],dN$x[fni[length(fni)]]),c(0,sdNy[fni],0),col='darkgrey')
+    }
+  }
   
   if (verbose==T){
-    return(list(Overlap,XPoint,CompPerc,JointPerc,AlphaValue,BetaValue))
+    return(list(Overlap,TAct,'FalsePositiveRate'=AlphaValue,'FalseNegativeRate'=BetaValue))
   }
   
 }
@@ -1378,27 +1716,113 @@ RankSimilarity<-function(RankInfo,PlotTitle){
   return(list('RankOrder'=order(cInfo),'RankInfo'=RankInfo,'RankNames'=colnames(RankInfo)[order(cInfo)]))
 }
 
-RelativeRank<-function(SimilarityObj){
+OverlapCalculator<-function(ReferenceDis,TestDis){
+  #Let the distributions be the needed input
+  dR<-density(ReferenceDis,from=-0.1,to=1.1)
+  dT<-density(TestDis,from=-.1,to=1.1)
+  if (max(TestDis)==0){
+    dT$y<-rep(0,length(dT$y))
+    dT$y[which(dT$x>=-0.001 & dT$x<=0.001)]<-1
+  }
+  sdT<-dT$y/sum(dT$y)
+  sdR<-dR$y/sum(dR$y)
+  #FP == Ref greater than Test
+  FalsePosIDX<-which((sdT<sdR) & (sdT>0.000009))
+  FP_T_ecdf<-ecdf(TestDis)
+  #FN == Test greater than Ref
+  FalseNegIDX<-which((sdT>=sdR) & (sdR>0.000009))
+  FN_R_ecdf<-ecdf(ReferenceDis)
+  
+  FPcont<-which(diff(FalsePosIDX)!=1)
+  FNcont<-which(diff(FalseNegIDX)!=1)
+  if (length(FPcont)>0){
+    internalFPidx<-c(1)
+    tempidx<-2
+    for (j in 1:length(FPcont)){
+      internalFPidx[tempidx]<-FPcont[j]
+      internalFPidx[tempidx+1]<-FPcont[j]+1
+      tempidx<-tempidx+2
+    }
+    internalFPidx[tempidx]<-length(FalsePosIDX)
+  } else {
+    internalFPidx<-c(1,length(FalsePosIDX))
+  }
+  if (length(FNcont)>0){
+    internalFNidx<-c(1)
+    tempidx<-2
+    for (j in 1:length(FNcont)){
+      internalFNidx[tempidx]<-FNcont[j]
+      internalFNidx[tempidx+1]<-FNcont[j]+1
+      tempidx<-tempidx+2
+    }
+    internalFNidx[tempidx]<-length(FalseNegIDX)
+  } else {
+    internalFNidx<-c(1,length(FalseNegIDX))
+  }
+  FP<-0
+  if (length(FalsePosIDX)>0){
+    for (j in 1:(length(internalFPidx)/2)){
+      jdxl<-(j-1)*2+1
+      jdxh<-j*2
+      fptemph<-FP_T_ecdf(dT$x[FalsePosIDX[internalFPidx[jdxh]]])
+      fptempl<-FP_T_ecdf(dT$x[FalsePosIDX[internalFPidx[jdxl]]])
+      FP<-FP+(fptemph-fptempl)
+    }
+  }
+  
+  FN<-0
+  if (length(FalseNegIDX)>0){
+    for (j in 1:(length(internalFNidx)/2)){
+      jdxl<-(j-1)*2+1
+      jdxh<-j*2
+      fntemph<-FN_R_ecdf(dR$x[FalseNegIDX[internalFNidx[jdxh]]])
+      fntempl<-FN_R_ecdf(dR$x[FalseNegIDX[internalFNidx[jdxl]]])
+      FN<-FN+(fntemph-fntempl)
+    }
+  }
+  Overlap<-FN+FP
+  OverlapPerc<-Overlap/(2-Overlap)
+  FP<-FP/(2-Overlap)
+  FN<-FN/(2-Overlap)
+  FP_ibounds<-FalsePosIDX[internalFPidx]
+  FN_ibounds<-FalseNegIDX[internalFNidx]
+  Output<-list('FP'=FP,'FN'=FN,'Overlap'=Overlap,'PercOverlap'=OverlapPerc,'FPi'=FP_ibounds,'FNi'=FN_ibounds)
+  return(Output)
+  
+}
+
+RelativeRank<-function(SimilarityObj,IntObjA,IntObjB){
   #ranking info used to scale
   k<-100
   #build density
   GPs<-row.names(SimilarityObj$RankInfoFinal)
   
-  Output<-data.frame(matrix(NA,nrow=length(GPs),ncol=5))
+  Output<-data.frame(matrix(NA,nrow=length(GPs),ncol=7))
   row.names(Output)<-GPs
-  colnames(Output)<-c('Overlap','Alpha','Beta','MeanZ','ActualZ')
+  colnames(Output)<-c('Overlap','Alpha','Beta','MeanZ1','ActualZ1','MeanZ2','ActualZ2')
   
   for (j in 1:length(GPs)){
-    TDis<-SimilarityObj$RankInfoFinal[j,]
+    TDis<-SimilarityObj$RankInfoFinal[GPs[j],]
     dT<-density(TDis,from=-0.1,to=1.1,na.rm=T)
-    NDis<-SimilarityObj$NullRankInfoFinal[j,]
-    dN<-density(NDis,from=-0.1,to=1.1,na.rm=T)
+    NDis1<-IntObjA$InternalRankingInfo[GPs[j],]
+    dN1<-density(NDis1,from=-0.1,to=1.1,na.rm=T)
+    NDis2<-IntObjA$InternalRankingInfo[GPs[j],]
+    dN2<-density(NDis2,from=-0.1,to=1.1,na.rm=T)
     TAct<-SimilarityObj$RankInfoActual[GPs[j]]
     #assess
     if (max(TDis)!=0){
       CompPerc<-ecdf(TDis)(TAct)
-      JointPerc<-ecdf(NDis)(TAct)
+      JointPerc1<-ecdf(NDis1)(TAct)
+      JointPerc2<-ecdf(NDis2)(TAct)
       CompH<-approx(dT$x,k*dT$y/sum(dT$y),TAct)
+      if (JointPerc1>JointPerc2){
+        dN<-dN1
+        NDis<-NDis1
+      } else {
+        dN<-dN2
+        NDis<-NDis2
+      }
+      
       JointH<-approx(dN$x,k*dN$y/sum(dN$y),TAct)
       if (is.na(CompH$y)){
         CompH$y<-0
@@ -1422,7 +1846,7 @@ RelativeRank<-function(SimilarityObj){
         as.data.frame(dT[c("x", "y")]),
         by = "x", suffixes = c(".T", ".N")
       )
-      df$Y.T[CPoint]<-0
+      df$y.T[CPoint]<-0
     }
     
     if (df$y.T[CPoint]<(10^-10)){
@@ -1440,11 +1864,16 @@ RelativeRank<-function(SimilarityObj){
     Output[j,2]<-AlphaValue
     Output[j,3]<-BetaValue
     
-    Nmean<-mean(NDis,na.rm=T)
-    Nsd<-sd(NDis,na.rm=T)
-    zT<-mean((TDis-Nmean)/Nsd,na.rm=T)
-    Output[j,4]<-zT
-    Output[j,5]<-(TAct-Nmean)/Nsd
+    Nmean1<-mean(NDis1,na.rm=T)
+    Nsd1<-sd(NDis1,na.rm=T)
+    zT1<-mean((TDis-Nmean1)/Nsd1,na.rm=T)
+    Output[j,4]<-zT1
+    Output[j,5]<-(TAct-Nmean1)/Nsd1
+    Nmean2<-mean(NDis2,na.rm=T)
+    Nsd2<-sd(NDis2,na.rm=T)
+    zT2<-mean((TDis-Nmean2)/Nsd2,na.rm=T)
+    Output[j,6]<-zT2
+    Output[j,7]<-(TAct-Nmean2)/Nsd2
   }
   
   
