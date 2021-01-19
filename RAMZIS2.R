@@ -1477,7 +1477,7 @@ InternalSimilarity<-function(filename,BootSet,kmin=1,rel=TRUE,MVCorrection=TRUE,
 }
 
 #plots internal boot object[[]]: 1 is the first
-InternalQuality<-function(filename,BootSet,SimilarityObj,PlotTitle,GroupName,Int=NULL,kmin=2,rel=TRUE,MVCorrection=TRUE,mn=FALSE,verbose=FALSE,legendpos='topleft',legendval=FALSE,xbound=c(0,1)){
+InternalQuality<-function(filename,BootSet,SimilarityObj,PlotTitle,GroupName,Int=NULL,kmin=2,rel=TRUE,MVCorrection=TRUE,mn=FALSE,verbose=FALSE,legendpos='topleft',legendval=FALSE,xbound=c(0,1),logval=F){
   if (!is.null(Int)){
     #Use Int as Int object
   } else {
@@ -1489,12 +1489,33 @@ InternalQuality<-function(filename,BootSet,SimilarityObj,PlotTitle,GroupName,Int
   TDis<-SimilarityObj$Summary$Tanimoto
   TDis[is.infinite(TDis)]<-NA
   dT<-density(TDis,from=-0.1,to=1.1,na.rm=T)
+  sdTy<-k*dT$y/sum(dT$y)
+  if (logval==T){
+    sdTy<-log(sdTy+1)
+    if (any(is.infinite(sdTy))){
+      sdTy[which(is.infinite(sdTy))]<-0
+    }
+  }
   NDis<-SimilarityObj$NullOut$NullTani
   NDis[is.infinite(NDis)]<-NA
   dN<-density(NDis,from=-0.1,to=1.1,na.rm=T)
+  sdNy<-k*dN$y/sum(dN$y)
+  if (logval==T){
+    sdNy<-log(sdNy+1)
+    if (any(is.infinite(sdNy))){
+      sdNy[which(is.infinite(sdNy))]<-0
+    }
+  }
   IDis<-Int$InternalTanimoto
   IDis[is.infinite(IDis)]<-NA
   dI<-density(IDis,from=-0.1,to=1.1,na.rm=T)
+  sdIy<-k*dI$y/sum(dI$y)
+  if (logval==T){
+    sdIy<-log(sdIy+1)
+    if (any(is.infinite(sdIy))){
+      sdIy[which(is.infinite(sdIy))]<-0
+    }
+  }
   TAct<-SimilarityObj$Actual
   OverlapData<-OverlapCalculator(IDis,TDis)
   #plot densities
@@ -1539,7 +1560,7 @@ InternalQuality<-function(filename,BootSet,SimilarityObj,PlotTitle,GroupName,Int
       fni<-seq(OverlapData$FNi[jdxl],OverlapData$FNi[jdxh])
       xi<-mean(c(dT$x[fni[1]],dT$x[fni[1]-1]),na.rm=T)
       x0<-mean(c(dT$x[fni[length(fni)]],dT$x[fni[length(fni)]+1]),na.rm=T)
-      polygon(c(xi,dN$x[fni],x0,x0),c(0,sdNy[fni],sdNy[fni[length(fni)]],0),col='darkgrey')
+      polygon(c(xi,dN$x[fni],x0,x0),c(0,sdIy[fni],sdIy[fni[length(fni)]],0),col='darkgrey')
     }
   }
   
