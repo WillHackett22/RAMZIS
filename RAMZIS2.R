@@ -94,7 +94,7 @@ GlycReRead<-function(Filelist,Outfilename=NULL,verbose=T){
     protdata<-tempdata[idx,]
     row.names(protdata)<-vapply(strsplit(row.names(protdata),'::'), `[`, 2, FUN.VALUE=character(1))
     if (!is.null(Outfilename)){
-      name<-strsplit(uniprot[j],"\\|")[[1]][length(strsplit(uniprot[j],"\\|")[[1]])]
+      name<-strsplit(uniprot[j],"\\|")[[1]][2]
       name<-strsplit(name,' ')[[1]][1]
       write.csv(protdata,paste0(Outfilename,'_',name,'.csv'))
     }
@@ -1515,53 +1515,41 @@ InternalQuality<-function(filename,BootSet,SimilarityObj,PlotTitle,GroupName,Int
   #percentile location
   CompPerc<-ecdf(TDis)(TAct)
   JointPerc<-ecdf(NDis)(TAct)
-  CompH<-approx(dT$x,k*dT$y/sum(dT$y),TAct)
-  JointH<-approx(dN$x,k*dN$y/sum(dN$y),TAct)
-  if (is.na(CompH$y)){
-    CompH$y<-0
-  }
-  if (is.na(JointH$y)){
-    JointH$y<-0
-  }
-  #text(TAct,CompH$y,labels = paste0(round(k*CompPerc,2),'% of Test'),pos=4)
-  #text(TAct,JointH$y,labels = paste0(round(k*JointPerc,2),'% of Null'),pos=2)
-  #coverage overlap
-  df <- merge(
-    as.data.frame(dI[c("x", "y")]),
-    as.data.frame(dT[c("x", "y")]),
-    by = "x", suffixes = c(".T", ".N")
-  )
-  df$comp <- as.numeric(df$y.T > df$y.N)
-  df$cross <- c(NA, diff(df$comp))
-  CPoint<-which(df$cross!=0)[which(max(df$y.T[which(df$cross!=0)])==df$y.T[which(df$cross!=0)])]
-  XPoint<-df$x[CPoint]
   
+  Overlap<-OverlapData$PercOverlap
+  AlphaValue<-round(OverlapData$FP,3)
+  BetaValue<-round(OverlapData$FN,3)
   
-  
-  if (df$y.T[CPoint]<(10^-10)){
-    Overlap<-0
-    Alpha<-0
-    Beta<-0
-  } else {
-    
+  if (AlphaValue>(10^-10)){
     #make alpha area
-    polygon(c(-0.1001,dI$x[dI$x<=XPoint],dI$x[dI$x==XPoint]),c(0,k*dI$y[dI$x<=XPoint]/sum(dI$y),0),col='black')
-    #make beta area
-    polygon(c(dT$x[dT$x==XPoint],dT$x[dT$x>=XPoint],1.1001),c(0,k*dT$y[dT$x>=XPoint]/sum(dT$y),0),col='darkgrey')
-    TArea<-(1-ecdf(TDis)(XPoint))
-    IArea<-ecdf(IDis)(XPoint)
-    Overlap1<-round(TArea+IArea,2)
-    Overlap<-round(100*Overlap1/(2-Overlap1),2)
-    Alpha<-round(TArea/(2-Overlap1),2)
-    Beta<-round(IArea/(2-Overlap1),2)
+    for (j in 1:(length(OverlapData$FPi)/2)){
+      jdxh<-j*2
+      jdxl<-(j-1)*2+1
+      fpi<-seq(OverlapData$FPi[jdxl],OverlapData$FPi[jdxh])
+      xi<-mean(c(dT$x[fpi[1]],dT$x[fpi[1]-1]),na.rm=T)
+      x0<-mean(c(dT$x[fpi[length(fpi)]],dT$x[fpi[length(fpi)]+1]),na.rm=T)
+      polygon(c(xi,dT$x[fpi],x0,x0),c(0,sdTy[fpi],sdTy[fpi[length(fpi)]],0),col='black')
+    }
   }
+  if (BetaValue>(10^-10)){
+    #make beta area
+    for (j in 1:(length(OverlapData$FNi)/2)){
+      jdxh<-j*2
+      jdxl<-(j-1)*2+1
+      fni<-seq(OverlapData$FNi[jdxl],OverlapData$FNi[jdxh])
+      xi<-mean(c(dT$x[fni[1]],dT$x[fni[1]-1]),na.rm=T)
+      x0<-mean(c(dT$x[fni[length(fni)]],dT$x[fni[length(fni)]+1]),na.rm=T)
+      polygon(c(xi,dN$x[fni],x0,x0),c(0,sdNy[fni],sdNy[fni[length(fni)]],0),col='darkgrey')
+    }
+  }
+  
   deltaIT<-1+(mean(IDis,na.rm=T)-mean(TDis,na.rm = T))
-  Confidence<-round(deltaIT*log10((k*max(dI$y)/sum(dI$y))/var(IDis,na.rm=T)*10^(-Alpha-Beta)),2)
+  Confidence<-round(deltaIT*log10((k*max(dI$y)/sum(dI$y))/var(IDis,na.rm=T)*10^(-AlphaValue-BetaValue)),2)
   if (legendval){
-    legend(legendpos,legend=c(paste('Observed Similarity in the',round(ecdf(TDis)(TAct),2)*100,'Percentile'),paste('Internal of',GroupName,'with Score=',Confidence),'Test Distribution',paste0(Alpha*100,'% False Positive Rate'),paste0(Beta*100,'% False Negative Rate')),fill=c(NA,3,2,'darkgrey','black'),lty=c(1,rep(NA,4)),lwd=c(3,NA,NA,NA,NA),density=c(0,NA,NA,NA,NA),border=c(NA,1,1,1,1))
+    legend(legendpos,legend=c(paste('Observed Similarity in the',round(ecdf(TDis)(TAct),2)*100,'Percentile'),paste('Internal of',GroupName,'with Score=',Confidence),'Test Distribution',paste0(AlphaValue*100,'% False Positive Rate'),paste0(BetaValue*100,'% False Negative Rate')),fill=c(NA,3,2,'darkgrey','black'),lty=c(1,rep(NA,4)),lwd=c(3,NA,NA,NA,NA),density=c(0,NA,NA,NA,NA),border=c(NA,1,1,1,1))
   }
   if (verbose==T){
-    return(list(Int,Overlap,XPoint,CompPerc,JointPerc))
+    return(list(Int,Overlap,XPoint,CompPerc,JointPerc,Confidence,AlphaValue,BetaValue))
   }
 
   
@@ -1622,20 +1610,34 @@ Overlap<-function(Dis1,Dis2){
 
 #plots observed, test, null
 
-SimPlot<-function(PlotTitle,SimilarityObj,legendpos='topleft',verbose=F,legendval=FALSE,xbound=c(0,1)){
+SimPlot<-function(PlotTitle,SimilarityObj,legendpos='topleft',verbose=F,legendval=FALSE,xbound=c(0,1),logval=FALSE){
   k<-100
   #build density
   TDis<-SimilarityObj$Summary$Tanimoto
   dT<-density(TDis,from=-0.1,to=1.1,na.rm=T)
   sdTy<-k*dT$y/sum(dT$y)
+  if (logval==T){
+    sdTy<-log(sdTy+1)
+    if (any(is.infinite(sdTy))){
+      sdTy[which(is.infinite(sdTy))]<-0
+    }
+  }
   
   NDis<-SimilarityObj$NullOut$NullTani
   dN<-density(NDis,from=-0.1,to=1.1,na.rm=T)
   sdNy<-k*dN$y/sum(dN$y)
-  
+  if (logval==T){
+    sdNy<-log(sdNy+1)
+    if (any(is.infinite(sdNy))){
+      sdNy[which(is.infinite(sdNy))]<-0
+    }
+  }
   TAct<-SimilarityObj$Actual
   
   OverlapData<-OverlapCalculator(SimilarityObj$NullOut$NullTani,SimilarityObj$Summary$Tanimoto)
+  if (logval==T){
+    #OverlapData<-OverlapCalculator(SimilarityObj$NullOut$NullTani,SimilarityObj$Summary$Tanimoto)
+  }
   #plot densities
   if (max(TDis)==0){
     mh<-max(sdNy)
@@ -1652,7 +1654,7 @@ SimPlot<-function(PlotTitle,SimilarityObj,legendpos='topleft',verbose=F,legendva
   
   
   #percentile location
-  Overlap<-OverlapData$OverlapPerc
+  Overlap<-OverlapData$PercOverlap
   AlphaValue<-OverlapData$FP
   BetaValue<-OverlapData$FN
   if (legendval){
@@ -1665,7 +1667,9 @@ SimPlot<-function(PlotTitle,SimilarityObj,legendpos='topleft',verbose=F,legendva
       jdxh<-j*2
       jdxl<-(j-1)*2+1
       fpi<-seq(OverlapData$FPi[jdxl],OverlapData$FPi[jdxh])
-      polygon(c(dT$x[fpi[1]],dT$x[fpi],dT$x[fpi[length(fpi)]]),c(0,sdTy[fpi],0),col='black')
+      xi<-mean(c(dT$x[fpi[1]],dT$x[fpi[1]-1]),na.rm=T)
+      x0<-mean(c(dT$x[fpi[length(fpi)]],dT$x[fpi[length(fpi)]+1]),na.rm=T)
+      polygon(c(xi,dT$x[fpi],x0,x0),c(0,sdTy[fpi],sdTy[fpi[length(fpi)]],0),col='black')
     }
   }
   if (BetaValue>(10^-10)){
@@ -1674,7 +1678,9 @@ SimPlot<-function(PlotTitle,SimilarityObj,legendpos='topleft',verbose=F,legendva
       jdxh<-j*2
       jdxl<-(j-1)*2+1
       fni<-seq(OverlapData$FNi[jdxl],OverlapData$FNi[jdxh])
-      polygon(c(dN$x[fni[1]],dN$x[fni],dN$x[fni[length(fni)]]),c(0,sdNy[fni],0),col='darkgrey')
+      xi<-mean(c(dT$x[fni[1]],dT$x[fni[1]-1]),na.rm=T)
+      x0<-mean(c(dT$x[fni[length(fni)]],dT$x[fni[length(fni)]+1]),na.rm=T)
+      polygon(c(xi,dN$x[fni],x0,x0),c(0,sdNy[fni],sdNy[fni[length(fni)]],0),col='darkgrey')
     }
   }
   
