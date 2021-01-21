@@ -94,14 +94,14 @@ GlycReRead<-function(Filelist,Outfilename=NULL,verbose=T){
     protdata<-tempdata[idx,]
     row.names(protdata)<-vapply(strsplit(row.names(protdata),'::'), `[`, 2, FUN.VALUE=character(1))
     if (!is.null(Outfilename)){
-      name<-strsplit(uniprot[j],"\\|")[[1]][2]
+      name<-strsplit(uniprot[j],"\\|")[[1]][length(strsplit(uniprot[j],"\\|")[[1]])]
       name<-strsplit(name,' ')[[1]][1]
       write.csv(protdata,paste0(Outfilename,'_',name,'.csv'))
     }
     if (verbose){
       name<-strsplit(uniprot[j],"\\|")[[1]][length(strsplit(uniprot[j],"\\|")[[1]])]
       name<-strsplit(name,' ')[[1]][1]
-      
+      outlist[[name]]<-protdata
     }
   }
   unigp<-duplicated(glypep)
@@ -115,7 +115,7 @@ GlycReRead<-function(Filelist,Outfilename=NULL,verbose=T){
     write.csv(tempdata,paste0(Outfilename,'.csv'))
   }
   if (verbose){
-    return(tempdata)
+    return(outlist)
   }
 }
 
@@ -174,7 +174,7 @@ ByonicRead<-function(Filelist,Outfilename=NULL,verbose=T){
 }
 
 
-GlyLineRead<-function(Filelist){}
+#GlyLineRead<-function(Filelist){}
 
 #SimDataClean
 SimDataClean<-function(filename,kmin=2,rel=TRUE,normvector='Default',logopt=FALSE){
@@ -677,18 +677,10 @@ TestMembershipProportion<-function(SimDist,BootDis1,BootDis2,ModalityList){
 
 #ModalityTest
 ModalityTest<-function(SimObject,IntObject1,IntObject2){
-  #SimMode<-Modality(SimObject$Summary$Tanimoto)
-  #gather modality data
-  #NullMode<-Modality(SimObject$NullOut$NullTani)
   Int1Mode<-Modality(IntObject1$InternalTanimoto)
   Int2Mode<-Modality(IntObject2$InternalTanimoto)
-  #gather proportion data
-  #TMP<-TestMembershipProportion(SimObject$Summary$Tanimoto,SimObject$Boot[[1]],SimObject$Boot[[2]],SimMode)
-  #NMP<-NullMembershipProportion(SimObject$NullOut$NullTani,SimObject$Boot[[3]],SimObject$Boot[[4]],NullMode)
   IMP1<-InternalMembershipProportion(IntObject1$InternalTanimoto,SimObject$Boot[[1]],Int1Mode)
   IMP2<-InternalMembershipProportion(IntObject2$InternalTanimoto,SimObject$Boot[[2]],Int2Mode)
-  #TZ<-ModalityZ(SimMode,TMP)
-  #NZ<-ModalityZ(NullMode,NMP)
   TZ<-NULL
   NZ<-NULL
   IZ1<-ModalityZ(Int1Mode,IMP1)
@@ -924,6 +916,35 @@ CombWRep<-function(n,r){
   return(factorial(n+r-1)/(factorial(n-1)*factorial(r)))
 }
 
+TestBootstrapGenerator<-function(dataframe1){
+  coln1<-dim(dataframe1)[2]
+  if (((coln1-2)>1) & ((coln1-2)<8)){
+    
+  } 
+}
+
+NullBootstrapGenerator<-function(dataframe1,dataframe2){
+  combn(6,2)
+}
+
+ManhattanVectorDistance<-function(vector1,dataframe1){
+  Out<-abs(vector1-dataframe1)
+  return(Out)
+}
+
+VectorMatrixMean<-function(vector1,dataframe1){
+  Out<-(vector1+dataframe1)/2
+  return(Out)
+}
+VectorMatrixMultiplication<-function(vector1,dataframe1){
+  Out<-(vector1*dataframe1)
+  return(Out)
+}
+VectorMatrixAddition<-function(vector1,dataframe1){
+  Out<-(vector1+dataframe1)
+  return(Out)
+}
+
 
 ###Preserved Symmetry Comparison
 SymmetricalSimBootstrap<-function(filename1,filename2,kmin=2,rel=TRUE,MVCorrection=TRUE,mn=FALSE,bootie=TRUE,logopt=FALSE,normvec=c('None','None')){
@@ -943,76 +964,43 @@ SymmetricalSimBootstrap<-function(filename1,filename2,kmin=2,rel=TRUE,MVCorrecti
   
   Nsmpl2<-CombWRep(coln2,coln2)
   Nsmpl1<-CombWRep(coln1,coln1)
-
-  if (((coln1-2)>1) & ((coln1-2)<20)){
-    cmseq<-(coln1-2):2
-    cm1fact<-sum(factorial(coln1)/(factorial(cmseq)*factorial(coln1-cmseq)))
-    MandatoryCombinations1<-matrix(NA,nrow = cm1fact,ncol=coln1)
-    jdx<-1
-    kdx<-0
-    for (j in 1:length(cmseq)){
-      kdx<-kdx+(factorial(coln1)/(factorial(cmseq[j])*factorial(coln1-cmseq[j])))
-      MandatoryCombinations1[jdx:kdx,1:cmseq[j]]<-t(combn(coln1,cmseq[j]))
-      MandatoryCombinations1[jdx:kdx,(cmseq[j]+1):coln1]<-t(apply(t(combn(coln1,cmseq[j])),1,sample,size=coln1-cmseq[j],replace=T))
-      jdx<-kdx+1
-    }
-  }
-  if (((coln2-2)>1) & ((coln2-2)<20)){
-    cmseq<-(coln2-2):2
-    cm2fact<-sum(factorial(coln2)/(factorial(cmseq)*factorial(coln2-cmseq)))
-    MandatoryCombinations2<-matrix(NA,nrow = cm2fact,ncol=coln2)
-    jdx<-1
-    kdx<-0
-    for (j in 1:length(cmseq)){
-      kdx<-kdx+(factorial(coln2)/(factorial(cmseq[j])*factorial(coln2-cmseq[j])))
-      MandatoryCombinations2[jdx:kdx,1:cmseq[j]]<-t(combn(coln2,cmseq[j]))
-      MandatoryCombinations2[jdx:kdx,(cmseq[j]+1):coln2]<-t(apply(t(combn(coln2,cmseq[j])),1,sample,size=coln2-cmseq[j],replace=T))
-      jdx<-kdx+1
-    }
-  }
   
-  if (bootie){
-    if (coln1<6 & 2<coln1){
-      Nsmpl1<-CombWRep(coln1,coln1-1)
-      combo1<-data.frame(matrix(1,nrow=Nsmpl1,ncol=(coln1)))
-      combo1<-data.frame(gtools::combinations(coln1,(coln1),repeats.allowed = TRUE))
-    } else if (coln1<=2) {
-      print(paste(filename1,' has too few samples. This will not work.'))
-      stop()
-    } else {
-      print('There be a number of samples here. The bootstrap generation will be slower.')
-      combo1<-data.frame(matrix(1,nrow=100,ncol=(coln1)))
-      for (j in 1:100){
-        combo1[j,]<-sort(sample(coln1,(coln1),replace = TRUE))
-      }
-      if (sum(duplicated(combo1))>0){
-        combo1<-combo1[-which(duplicated(combo1)),]
-      }
-      
-    }
-    if (coln2<6 & 2<coln2){
-      Nsmpl2<-CombWRep(coln2,coln2)
-      combo2<-data.frame(matrix(1,nrow=Nsmpl2,ncol=(coln2)))
-      combo2<-data.frame(gtools::combinations(coln2,(coln2),repeats.allowed = TRUE))
-    } else if (coln2<=2) {
-      print(paste(filename2,' has too few samples. This will not work.'))
-      stop()
-    } else {
-      print('There be a number of samples here. The bootstrap generation will be slower.')
-      combo2<-data.frame(matrix(1,nrow=100,ncol=(coln2)))
-      for (j in 1:100){
-        combo2[j,]<-sort(sample(coln2,(coln2),replace = TRUE))
-      }
-      if (sum(duplicated(combo1))>0){
-        combo2<-combo2[-which(duplicated(combo2)),]
-      }
-      
-    }
+  if (coln1<6 & 2<coln1){
+    Nsmpl1<-CombWRep(coln1,coln1-1)
+    combo1<-data.frame(matrix(1,nrow=Nsmpl1,ncol=(coln1)))
+    combo1<-data.frame(gtools::combinations(coln1,(coln1),repeats.allowed = TRUE))
+  } else if (coln1<=2) {
+    print(paste(filename1,' has too few samples. This will not work.'))
+    stop()
   } else {
-    combo1<-combn(cols1,(coln1))
-    combo2<-combn(cols2,(coln2))
+    print('There be a number of samples here. The bootstrap generation will be slower.')
+    combo1<-data.frame(matrix(1,nrow=100,ncol=(coln1)))
+    for (j in 1:100){
+      combo1[j,]<-sort(sample(coln1,(coln1),replace = TRUE))
+    }
+    if (sum(duplicated(combo1))>0){
+      combo1<-combo1[-which(duplicated(combo1)),]
+    }
+    
   }
-  
+  if (coln2<6 & 2<coln2){
+    Nsmpl2<-CombWRep(coln2,coln2)
+    combo2<-data.frame(matrix(1,nrow=Nsmpl2,ncol=(coln2)))
+    combo2<-data.frame(gtools::combinations(coln2,(coln2),repeats.allowed = TRUE))
+  } else if (coln2<=2) {
+    print(paste(filename2,' has too few samples. This will not work.'))
+    stop()
+  } else {
+    print('There be a number of samples here. The bootstrap generation will be slower.')
+    combo2<-data.frame(matrix(1,nrow=100,ncol=(coln2)))
+    for (j in 1:100){
+      combo2[j,]<-sort(sample(coln2,(coln2),replace = TRUE))
+    }
+    if (sum(duplicated(combo1))>0){
+      combo2<-combo2[-which(duplicated(combo2)),]
+    }
+    
+  }
   
   jac1<-rep(0,nrow(combo1)*nrow(combo2)) # jaccard holder depricated
   tan1<-rep(0,nrow(combo1)*nrow(combo2)) # tanimoto holder
@@ -1086,56 +1074,54 @@ SymmetricalSimBootstrap<-function(filename1,filename2,kmin=2,rel=TRUE,MVCorrecti
   ncomb2<-nrow(combo2)
   ncombt<-ncomb1+ncomb2
   ncombs<-ncomb1*ncomb2
-  for (j in 1:nrow(combo1)){
-    dT<-abs(T__Hold[,j]-T__Hold[,(ncomb1+1):ncombt])
-    row.names(dT)<-row.names(T__Hold)
-    presence<-(PHold[,j]+PHold[,(ncomb1+1):ncombt])/2
-    if (mn==FALSE){
-      KTerm<-1+presence
-      row.names(KTerm)<-row.names(PHold)
-    } else {
-      KTerm<-mn
-    }
-    for (m in 1:length(TRef)){
-      tanmathold[(((j-1)*ncomb2)+1):(j*ncomb2),TRef[m]]<-unlist(T__Hold[TRef[m],j]*T__Hold[TRef[m],(ncomb1+1):ncombt]*(KTerm[TRef[m],]^(-dT[TRef[m],])))
-    }
-    T11<-t(tanmathold[(((j-1)*ncomb2)+1):(j*ncomb2),])
-    for (m in 1:length(TRef)){
-      tanmatholdW[TRef[m],(((j-1)*ncomb2)+1):(j*ncomb2)]<-unlist(T11[TRef[m],]/(unlist(T10[j])+T01-colSums(T11,na.rm=T)))
-    }
+  dTtemp<-apply(T__Hold[,1:ncomb1],2,ManhattanVectorDistance,dataframe1=T__Hold[,(ncomb1+1):ncombt])
+  dT<-data.frame(matrix(unlist(dTtemp),nrow=nrow(T__Hold)),row.names = TRef)
+  prestemp<-apply(PHold[,1:ncomb1],2,VectorMatrixMean,dataframe1=PHold[,(ncomb1+1):ncombt])
+  presence<-data.frame(matrix(unlist(prestemp),nrow=nrow(PHold)),row.names = row.names(PHold))
+  T11temp<-apply(T__Hold[,1:ncomb1],2,VectorMatrixMultiplication,dataframe1=T__Hold[,(ncomb1+1):ncombt])
+  T11mod<-data.frame(matrix(unlist(T11temp),nrow=nrow(T__Hold)),row.names = row.names(T__Hold))
+  if (mn==FALSE){
+    KTerm<-1+presence
+    row.names(KTerm)<-row.names(PHold)
+  } else {
+    KTerm<-mn
   }
-  
+  T11<-T11mod*(KTerm)^-dT
+  tanmathold<-t(T11)
+  Denominator<-rep(0,dim(T11)[2])
+  for (j in 1:length(T10)){
+    Denominator[((j-1)*length(T01)+1):(j*length(T01))]<-unlist(T10[j])+unlist(T01)
+  }
+  tanmatholdW<-T11/(Denominator-colSums(T11,na.rm=T))
   tan1<-colSums(tanmatholdW,na.rm=T)
+  
   #calculate null
   colnt<-coln1+coln2
-  if (bootie){
-    if (colnt<5 & 2<colnt){
-      Nsmplt1<-CombWRep(colnt,coln1)
-      Nsmplt2<-CombWRep(colnt,coln2)
-      combot1<-data.frame(matrix(1,nrow=Nsmplt1,ncol=coln1))
-      combot1<-data.frame(gtools::combinations(colnt,coln1,repeats.allowed = TRUE))
-      combot2<-data.frame(matrix(1,nrow=Nsmplt2,ncol=coln2))
-      combot2<-data.frame(gtools::combinations(colnt,coln2,repeats.allowed = TRUE))
-    } else {
-      print('There be a number of samples here. The bootstrap generation will be slower.')
-      combot1<-data.frame(matrix(1,nrow=150,ncol=coln1))
-      combot2<-data.frame(matrix(1,nrow=150,ncol=coln2))
-      for (j in 1:150){
-        combot1[j,]<-sort(sample(colnt,coln1,replace = TRUE))
-        combot2[j,]<-sort(sample(colnt,coln2,replace = TRUE))
-      }
-      if (sum(duplicated(combot1))>0){
-        combot1<-combot1[-which(duplicated(combot1)),]
-      }
-      if (sum(duplicated(combot2))>0){
-        combot2<-combot2[-which(duplicated(combot2)),]
-      }
-      
-    }
-     
+  
+  if (colnt<5 & 2<colnt){
+    Nsmplt1<-CombWRep(colnt,coln1)
+    Nsmplt2<-CombWRep(colnt,coln2)
+    combot1<-data.frame(matrix(1,nrow=Nsmplt1,ncol=coln1))
+    combot1<-data.frame(gtools::combinations(colnt,coln1,repeats.allowed = TRUE))
+    combot2<-data.frame(matrix(1,nrow=Nsmplt2,ncol=coln2))
+    combot2<-data.frame(gtools::combinations(colnt,coln2,repeats.allowed = TRUE))
   } else {
-    combot<-'Error'
+    print('There be a number of samples here. The bootstrap generation will be slower.')
+    combot1<-data.frame(matrix(1,nrow=150,ncol=coln1))
+    combot2<-data.frame(matrix(1,nrow=150,ncol=coln2))
+    for (j in 1:150){
+      combot1[j,]<-sort(sample(colnt,coln1,replace = TRUE))
+      combot2[j,]<-sort(sample(colnt,coln2,replace = TRUE))
+    }
+    if (sum(duplicated(combot1))>0){
+      combot1<-combot1[-which(duplicated(combot1)),]
+    }
+    if (sum(duplicated(combot2))>0){
+      combot2<-combot2[-which(duplicated(combot2)),]
+    }
+    
   }
+  
   row.names(combot2)<-NULL
   row.names(combot1)<-NULL
   
@@ -1255,25 +1241,26 @@ SymmetricalSimBootstrap<-function(filename1,filename2,kmin=2,rel=TRUE,MVCorrecti
   ncombt2<-nrow(combot2)
   ncombtt<-ncombt1+ncombt2
   ncombts<-ncombt1*ncombt2
-  for (j in 1:nrow(combot1)){
-    dTN<-abs(T__HoldN[,j]-T__HoldN[,(ncombt1+1):ncombtt])
-    row.names(dTN)<-row.names(T__HoldN)
-    presenceN<-(PHoldN[,j]+PHoldN[,(ncombt1+1):ncombtt])/2
-    if (mn==FALSE){
-      KTermN<-1+presenceN
-      row.names(KTermN)<-row.names(PHoldN)
-    } else {
-      KTermN<-mn
-    }
-    for (m in 1:length(TRef)){
-      tanmatholdN[(((j-1)*ncombt2)+1):(j*ncombt2),TRef[m]]<-unlist(T__HoldN[TRef[m],j]*T__HoldN[TRef[m],(ncombt1+1):ncombtt]*(KTermN[TRef[m],]^(-dTN[TRef[m],])))
-    }
-    T11N<-t(tanmatholdN[(((j-1)*ncombt2)+1):(j*ncombt2),])
-    for (m in 1:length(TRef)){
-      tanmatholdNW[TRef[m],(((j-1)*ncombt2)+1):(j*ncombt2)]<-unlist(T11N[TRef[m],]/(unlist(T10N[j])+T01N-colSums(T11N,na.rm=T)))
-    }
+  dTNtemp<-apply(T__HoldN[,1:ncombt1],2,ManhattanVectorDistance,dataframe1=T__HoldN[,(ncombt1+1):ncombtt])
+  dTN<-data.frame(matrix(unlist(dTNtemp),nrow=nrow(T__HoldN)),row.names = row.names(T__HoldN))
+  prestempN<-apply(PHoldN[,1:ncombt1],2,VectorMatrixMean,dataframe1=PHoldN[,(ncombt1+1):ncombtt])
+  presenceN<-data.frame(matrix(unlist(prestempN),nrow=nrow(PHoldN)),row.names = row.names(PHoldN))
+  T11Ntemp<-apply(T__HoldN[,1:ncombt1],2,VectorMatrixMultiplication,dataframe1=T__HoldN[,(ncombt1+1):ncombtt])
+  T11Nmod<-data.frame(matrix(unlist(T11Ntemp),nrow=nrow(T__HoldN)),row.names = row.names(T__HoldN))
+  if (mn==FALSE){
+    KTermN<-1+presenceN
+    row.names(KTermN)<-row.names(PHoldN)
+  } else {
+    KTermN<-mn
   }
-  tanN<-colSums(tanmatholdNW)
+  T11N<-T11Nmod*(KTermN)^-dTN
+  tanmatholdN<-t(T11N)
+  DenominatorN<-rep(0,dim(T11N)[2])
+  for (j in 1:length(T10N)){
+    DenominatorN[((j-1)*length(T01N)+1):(j*length(T01N))]<-unlist(T10N[j])+unlist(T01N)
+  }
+  tanmatholdNW<-T11N/(DenominatorN-colSums(T11N,na.rm=T))
+  tanN<-colSums(tanmatholdNW,na.rm=T)
   
   #calculate actual similarity
   T1_a<-rowMeans(file1,na.rm =TRUE)
