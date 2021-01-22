@@ -945,6 +945,30 @@ VectorMatrixAddition<-function(vector1,dataframe1){
   return(Out)
 }
 
+SimilarityCalculation<-function(ABMatrix,AATerm,BBTerm,PresenceMatrix,AMatSize,BMatSize,DistScale){
+  TotalSize<-AMatSize+BMatSize
+  dTtemp<-apply(ABMatrix[,1:AMatSize],2,ManhattanVectorDistance,dataframe1=ABMatrix[,(AMatSize+1):TotalSize])
+  dT<-data.frame(matrix(unlist(dTtemp),nrow=nrow(ABMatrix)),row.names = row.names(ABMatrix))
+  prestemp<-apply(PresenceMatrix[,1:AMatSize],2,VectorMatrixMean,dataframe1=PresenceMatrix[,(AMatSize+1):TotalSize])
+  presence<-data.frame(matrix(unlist(prestemp),nrow=nrow(PresenceMatrix)),row.names = row.names(PresenceMatrix))
+  T11temp<-apply(ABMatrix[,1:AMatSize],2,VectorMatrixMultiplication,dataframe1=ABMatrix[,(AMatSize+1):TotalSize])
+  T11mod<-data.frame(matrix(unlist(T11temp),nrow=nrow(ABMatrix)),row.names = row.names(ABMatrix))
+  if (DistScale==FALSE){
+    KTerm<-1+presence
+    row.names(KTerm)<-row.names(PresenceMatrix)
+  } else {
+    KTerm<-DistScale
+  }
+  T11<-T11mod*(KTerm)^-dT
+  tanmathold<-t(T11)
+  Denominator<-rep(0,dim(T11)[2])
+  for (j in 1:length(AATerm)){
+    Denominator[((j-1)*length(AATerm)+1):(j*length(BBTerm))]<-unlist(AATerm[j])+unlist(BBTerm)
+  }
+  tanmatholdW<-T11/(Denominator-colSums(T11,na.rm=T))
+  tan1<-colSums(tanmatholdW,na.rm=T)
+  Outlist<-list("Numerator"=tanmathold,"Contribution"=tanmatholdW,"Similarity"=tan1)
+}
 
 ###Preserved Symmetry Comparison
 SymmetricalSimBootstrap<-function(filename1,filename2,kmin=2,rel=TRUE,MVCorrection=TRUE,mn=FALSE,bootie=TRUE,logopt=FALSE,normvec=c('None','None')){
