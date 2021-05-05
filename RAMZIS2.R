@@ -3,8 +3,7 @@
 #1-14-19
 #Functions for Ranking Glycopeptides based off of comparative similarity metrics
 #Final Function:
-#RAMZIS(FileList1,FileList2,Norm1,Norm2,kmin)
-#If your data is pre-normalized: Use a lower level function
+#RAMZIS(FileList1,FileList2,NormVector,kmin)
 #FileList1/2: List of GlycReSoft output files
 #Norm1/2: Normalization Factor pulled from PEAKS analysis, defaults to all being equal
 #kmin= minimum number of observations a glycopeptide  must have in a sample group to be observed
@@ -19,12 +18,8 @@
 #
 #
 #Functions and Dependencies:
-#WithinSim
-##Takes a single glycopeptide-signal filename (with location) as input. 
-##Outputs within similarity distribution
-#BetweenSim
-##Takes two glycopeptide-signal filenames as input.
-##Outputs similarity value comparing the two files
+#SymmetricalSimBootStrap
+##
 #SimPlot
 ##Takes two within distributions and a between similarity value
 ##Outputs a comparative plot of the two distributions
@@ -174,79 +169,6 @@ ByonicRead<-function(Filelist,Outfilename=NULL,verbose=T){
 }
 
 
-#GlyLineRead<-function(Filelist){}
-
-#SimDataClean
-SimDataClean<-function(filename,kmin=2,rel=TRUE,normvector='Default',logopt=FALSE){
-  #Read in Data and measure dataframe size
-  if (typeof(filename)=='character'){
-    file1<-read.csv(filename,header=TRUE, row.names=1,stringsAsFactors = FALSE)
-    #normalize based off of normalization vector
-    if (length(normvector)==ncol(file1) ){
-      for (i in 1:ncol(file1)){
-        file1[,i]<-as.numeric(file1[,i])*normvector[i]
-      }
-    }
-    data1<-file1
-    #standardize data by max abundance 
-    if (rel){
-      for (i in 1:ncol(file1)){
-        data1[,i]<- as.numeric(file1[,i])/max(colSums(file1,na.rm = T))
-      }
-    }
-  } else if(typeof(filename)=='list'){
-    file1<-filename
-    if (length(normvector)==ncol(file1) ){
-      for (i in 1:ncol(file1)){
-        file1[,i]<-as.numeric(file1[,i])*normvector[i]
-      }
-    }
-    data1<-file1
-    if (rel){
-      for (i in 1:ncol(file1)){
-        data1[,i]<- as.numeric(file1[,i])/max(colSums(file1,na.rm = T))
-      }
-    }
-    
-    #print('Program Detected List for filename. Attempting use as dataframe')
-  }
-  file1[is.na(file1)]<-0
-  data1[is.na(data1)]<-0
-  
-  if (logopt){
-    data1<-log(data1)
-  }
-  
-  rown<-dim(file1)[1] #GPs
-  coln<-dim(file1)[2] #samples
-  #Clean Dataframes: remove rows where there are one or fewer signals
-  #number of replicates
-  reps<- coln
-  num<-0
-  #count the missing values in rows
-  mvhold<-rep(0,rown)
-  for (row in 1:rown){
-    rowi<-row-num
-    mvcount<-0
-    #check how many missing values in a given row
-    for (col in 1:coln){
-      for (x in file1[row,col]){
-        if (x==0){
-          mvcount<- mvcount+1
-        }
-      }
-    }
-    mvhold[row]<-mvcount
-  }
-  #turn missing values into observed values
-  remhold<-coln-mvhold
-  #remove data where less than kmin (default=2) are seen
-  if (length(which(remhold<kmin))>0){
-    data1<-data1[-which(remhold<2),]
-  }
-  return(data1)
-}
-
 SimDataCleanLog<-function(filename,kmin=2,rel=TRUE,normvector='Default'){
   #Read in Data and measure dataframe size
   if (typeof(filename)=='character'){
@@ -319,7 +241,7 @@ SimDataCleanLog<-function(filename,kmin=2,rel=TRUE,normvector='Default'){
 }
 
 #SimDataCleanLog that does individual relative abundance
-SimDataCleanLogA<-function(filename,kmin=2,rel=TRUE,normvector='None'){
+SimDataCleanLogA<-function(filename,kmin=2,rel=TRUE,normvector='None',logoption=FALSE){
   #Read in Data and measure dataframe size
   if (typeof(filename)=='character'){
     file1<-read.csv(filename,header=TRUE, row.names=1,stringsAsFactors = FALSE)
@@ -337,8 +259,11 @@ SimDataCleanLogA<-function(filename,kmin=2,rel=TRUE,normvector='None'){
         }
       }
     }
+    if (logoption){
+      file1<-log(file1+1)
+    }
     data1<-file1
-    #standardize data by max abundance 
+    #standardize data by max abundance
     if (rel){
       for (i in 1:ncol(file1)){
         data1[,i]<- as.numeric(file1[,i])/max(colSums(file1,na.rm = T))
@@ -358,6 +283,9 @@ SimDataCleanLogA<-function(filename,kmin=2,rel=TRUE,normvector='None'){
           file1[,i]<-as.numeric(file1[,i])/sum(as.numeric(file1[,i]),na.rm = T)
         }
       }
+    }
+    if (logoption){
+      file1<-log(file1+1)
     }
     data1<-file1
     if (rel){
@@ -408,7 +336,7 @@ SimDataCleanLogA<-function(filename,kmin=2,rel=TRUE,normvector='None'){
 
 
 PeptideCollapser<-function(filename,kmin=2,rel=TRUE,sequonvector){
-  datfile1<-SimDataClean(filename,kmin,rel)
+  datfile1<-SimDataCleanLogA(filename,kmin,rel)
   #find sequon sections
   #find glycans associated with a sequon
   #merge same glycans for a given sequon
@@ -688,6 +616,77 @@ ModalityTest<-function(SimObject,IntObject1,IntObject2){
   RejectList<-list('Test'=TZ,'Null'=NZ,'Int1'=IZ1,'Int2'=IZ2)
   return(RejectList)
 }
+#determine z score of test value in reference distribution
+ZScoreFunction<-function(ReferenceMean,ReferenceSD,TestNum){
+  Zscore<-(TestNum-ReferenceMean)/ReferenceSD
+  return(Zscore)
+}
+#determine zscores of test values in reference distribution
+ZScoreDistributionFunction<-function(ReferenceDis,TestDis){
+  ReferenceMean<-mean(ReferenceDis,na.rm=T)
+  ReferenceSD<-sd(ReferenceDis,na.rm=T)
+  Zdis<-sapply(TestDis,ZScoreFunction,ReferenceMean=ReferenceMean,ReferenceSD=ReferenceSD)
+  return(Zdis)
+}
+#ZScoreRanking Function
+#note assumes that null and test are lined up
+ZScoreContributionFunction<-function(ReferenceCont,TestCont){
+  ZOut<-data.frame(matrix(NA,nrow=dim(ReferenceCont)[1],ncol=dim(TestCont)[2]),row.names = row.names(ReferenceCont))
+  ZN<-row.names(ZOut)
+  for (j in 1:(dim(ZOut)[1])){
+    ZOut[ZN[j],]<-ZScoreDistributionFunction(ReferenceCont[ZN[j],],TestCont[ZN[j],])
+  }
+  return(ZOut)
+}
+RankingByZScore<-function(SimilarityObj){
+  ZData<-ZScoreContributionFunction(SimilarityObj$NullRankInfoFinal,SimilarityObj$RankInfoFinal)
+  ZMeans<-rowMeans(ZData,na.rm=T)
+  ZMeans[is.na(ZMeans)]<-0
+  return(sort(ZMeans))
+}
+
+#check perc overlap of contribution distributions
+ContributionQualityCheckFunction<-function(SimilarityObj,InternalSimObj1,InternalSimObj2){
+  TestCont<-SimilarityObj$RankInfoFinal
+  PercOut1<-ContributionQualityCheckSubFunction(InternalSimObj1$InternalRankingInfo,TestCont)
+  PercOut2<-ContributionQualityCheckSubFunction(InternalSimObj2$InternalRankingInfo,TestCont)
+  PercOut<-merge(PercOut1,PercOut2,by=0,all=T)
+  row.names(PercOut)<-PercOut[,1]
+  PercOut<-PercOut[,-1]
+  colnames(PercOut)<-c("SampleGroup1","SampleGroup2")
+  PassOut<-PercOut<=0.25
+  return(list("PassIndicator"=PassOut,"PercentOverlaps"=PercOut))
+}
+ContributionQualityCheckSubFunction<-function(InternalCont,TestCont){
+  rl<-dim(TestCont)[2]
+  il<-dim(InternalCont)[2]
+  tempcont<-merge(TestCont,InternalCont,by=0,all=T)
+  tempcont<-tempcont[,-1]
+  row.names(tempcont)<-row.names(TestCont)
+  iN<-row.names(InternalCont)
+  tempcont[is.na(tempcont)]<-0
+  tempout<-data.frame(matrix(NA,nrow=dim(TestCont)[1],ncol=1),row.names=row.names(TestCont))
+  for (j in 1:dim(InternalCont)[1]){
+    tempout[iN[j],]<-OverlapCalculator(unlist(tempcont[iN[j],(rl+1):(rl+il)]),unlist(tempcont[iN[j],1:rl]))$PercOverlap
+  }
+  return(tempout)
+}
+#bring quality check and ranking together
+RankingQualityFunction<-function(SimilarityObj,InternalSimObj1,InternalSimObj2){
+  CQData<-ContributionQualityCheckFunction(SimilarityObj,InternalSimObj1,InternalSimObj2)
+  RData<-RankingByZScore(SimilarityObj)
+  RankingDataSummary<-merge(CQData,RData,by=0,all=T)
+  row.names(RankingDataSummary)<-RankingDataSummary[,1]
+  RankingDataSummary<-RankingDataSummary[,-1]
+  colnames(RankingDataSummary)<-c("QualityGroup1","QualityGroup2","Overlap%_1","Overlap%_2","ZScore")
+  tempval1<-RankingDataSummary$QualityGroup1
+  tempval1[is.na(tempval1)]<-TRUE
+  tempval2<-RankingDataSummary$QualityGroup2
+  tempval2[is.na(tempval2)]<-TRUE
+  RankingDataSummary$PassOverall<-(tempval1&tempval2)
+  RankingDataSummary<-RankingDataSummary[order(RankingDataSummary$ZScore),]
+  return(RankingDataSummary)
+}
 
 ModalityInterpreter<-function(RejectList,IntObject1,Mode1,IntObject2,Mode2,SimObject=NULL){
   Int1Out<-NULL
@@ -843,6 +842,8 @@ ModalityZSubset<-function(ModeObject,PropObject,npercent=.1){
   }
 }
 
+#creates theoretical data based on parameters given
+
 TheoreticalDataGenerator<-function(n,g,p,w,alp=2,bet=2,maxim=TRUE,w0=2,w1=10){
   #n samples
   #g identifications
@@ -963,9 +964,9 @@ SimilarityCalculation<-function(ABMatrix,AATerm,BBTerm,PresenceMatrix,AMatSize,B
   tanmathold<-t(T11)
   Denominator<-rep(0,dim(T11)[2])
   for (j in 1:length(AATerm)){
-    Denominator[((j-1)*length(AATerm)+1):(j*length(BBTerm))]<-unlist(AATerm[j])+unlist(BBTerm)
+    Denominator[((j-1)*length(BBTerm)+1):(j*length(BBTerm))]<-unlist(AATerm[j])+unlist(BBTerm)
   }
-  tanmatholdW<-T11/(Denominator-colSums(T11,na.rm=T))
+  tanmatholdW<-t(t(T11)/(Denominator-colSums(T11,na.rm=T)))
   tan1<-colSums(tanmatholdW,na.rm=T)
   Outlist<-list("Numerator"=tanmathold,"Contribution"=tanmatholdW,"Similarity"=tan1)
 }
@@ -1005,7 +1006,6 @@ SymmetricalSimBootstrap<-function(filename1,filename2,kmin=2,rel=TRUE,MVCorrecti
     if (sum(duplicated(combo1))>0){
       combo1<-combo1[-which(duplicated(combo1)),]
     }
-    
   }
   if (coln2<6 & 2<coln2){
     Nsmpl2<-CombWRep(coln2,coln2)
@@ -1023,7 +1023,6 @@ SymmetricalSimBootstrap<-function(filename1,filename2,kmin=2,rel=TRUE,MVCorrecti
     if (sum(duplicated(combo1))>0){
       combo2<-combo2[-which(duplicated(combo2)),]
     }
-    
   }
   
   jac1<-rep(0,nrow(combo1)*nrow(combo2)) # jaccard holder depricated
@@ -1098,26 +1097,10 @@ SymmetricalSimBootstrap<-function(filename1,filename2,kmin=2,rel=TRUE,MVCorrecti
   ncomb2<-nrow(combo2)
   ncombt<-ncomb1+ncomb2
   ncombs<-ncomb1*ncomb2
-  dTtemp<-apply(T__Hold[,1:ncomb1],2,ManhattanVectorDistance,dataframe1=T__Hold[,(ncomb1+1):ncombt])
-  dT<-data.frame(matrix(unlist(dTtemp),nrow=nrow(T__Hold)),row.names = TRef)
-  prestemp<-apply(PHold[,1:ncomb1],2,VectorMatrixMean,dataframe1=PHold[,(ncomb1+1):ncombt])
-  presence<-data.frame(matrix(unlist(prestemp),nrow=nrow(PHold)),row.names = row.names(PHold))
-  T11temp<-apply(T__Hold[,1:ncomb1],2,VectorMatrixMultiplication,dataframe1=T__Hold[,(ncomb1+1):ncombt])
-  T11mod<-data.frame(matrix(unlist(T11temp),nrow=nrow(T__Hold)),row.names = row.names(T__Hold))
-  if (mn==FALSE){
-    KTerm<-1+presence
-    row.names(KTerm)<-row.names(PHold)
-  } else {
-    KTerm<-mn
-  }
-  T11<-T11mod*(KTerm)^-dT
-  tanmathold<-t(T11)
-  Denominator<-rep(0,dim(T11)[2])
-  for (j in 1:length(T10)){
-    Denominator[((j-1)*length(T01)+1):(j*length(T01))]<-unlist(T10[j])+unlist(T01)
-  }
-  tanmatholdW<-T11/(Denominator-colSums(T11,na.rm=T))
-  tan1<-colSums(tanmatholdW,na.rm=T)
+  TempSimObject<-SimilarityCalculation(T__Hold,T10,T01,PHold,ncomb1,ncomb2,mn)
+  tanmathold<-TempSimObject$Numerator
+  tanmatholdW<-TempSimObject$Contribution
+  tan1<-TempSimObject$Similarity
   
   #calculate null
   colnt<-coln1+coln2
@@ -1131,9 +1114,10 @@ SymmetricalSimBootstrap<-function(filename1,filename2,kmin=2,rel=TRUE,MVCorrecti
     combot2<-data.frame(gtools::combinations(colnt,coln2,repeats.allowed = TRUE))
   } else {
     print('There be a number of samples here. The bootstrap generation will be slower.')
-    combot1<-data.frame(matrix(1,nrow=150,ncol=coln1))
-    combot2<-data.frame(matrix(1,nrow=150,ncol=coln2))
-    for (j in 1:150){
+    nbootsize<-200
+    combot1<-data.frame(matrix(1,nrow=nbootsize,ncol=coln1))
+    combot2<-data.frame(matrix(1,nrow=nbootsize,ncol=coln2))
+    for (j in 1:nbootsize){
       combot1[j,]<-sort(sample(colnt,coln1,replace = TRUE))
       combot2[j,]<-sort(sample(colnt,coln2,replace = TRUE))
     }
@@ -1265,26 +1249,10 @@ SymmetricalSimBootstrap<-function(filename1,filename2,kmin=2,rel=TRUE,MVCorrecti
   ncombt2<-nrow(combot2)
   ncombtt<-ncombt1+ncombt2
   ncombts<-ncombt1*ncombt2
-  dTNtemp<-apply(T__HoldN[,1:ncombt1],2,ManhattanVectorDistance,dataframe1=T__HoldN[,(ncombt1+1):ncombtt])
-  dTN<-data.frame(matrix(unlist(dTNtemp),nrow=nrow(T__HoldN)),row.names = row.names(T__HoldN))
-  prestempN<-apply(PHoldN[,1:ncombt1],2,VectorMatrixMean,dataframe1=PHoldN[,(ncombt1+1):ncombtt])
-  presenceN<-data.frame(matrix(unlist(prestempN),nrow=nrow(PHoldN)),row.names = row.names(PHoldN))
-  T11Ntemp<-apply(T__HoldN[,1:ncombt1],2,VectorMatrixMultiplication,dataframe1=T__HoldN[,(ncombt1+1):ncombtt])
-  T11Nmod<-data.frame(matrix(unlist(T11Ntemp),nrow=nrow(T__HoldN)),row.names = row.names(T__HoldN))
-  if (mn==FALSE){
-    KTermN<-1+presenceN
-    row.names(KTermN)<-row.names(PHoldN)
-  } else {
-    KTermN<-mn
-  }
-  T11N<-T11Nmod*(KTermN)^-dTN
-  tanmatholdN<-t(T11N)
-  DenominatorN<-rep(0,dim(T11N)[2])
-  for (j in 1:length(T10N)){
-    DenominatorN[((j-1)*length(T01N)+1):(j*length(T01N))]<-unlist(T10N[j])+unlist(T01N)
-  }
-  tanmatholdNW<-T11N/(DenominatorN-colSums(T11N,na.rm=T))
-  tanN<-colSums(tanmatholdNW,na.rm=T)
+  TempSimObject<-SimilarityCalculation(T__HoldN,T10N,T01N,PHoldN,ncombt1,ncombt2,mn)
+  tanmatholdN<-TempSimObject$Numerator
+  tanmatholdNW<-TempSimObject$Contribution
+  tanN<-TempSimObject$Similarity
   
   #calculate actual similarity
   T1_a<-rowMeans(file1,na.rm =TRUE)
@@ -1341,17 +1309,18 @@ SymmetricalSimBootstrap<-function(filename1,filename2,kmin=2,rel=TRUE,MVCorrecti
   }
   taniActualF<-sum(tanmatAFinal)
   
-  
-  
-  Output<-data.frame(matrix(c(jac1,tan1),nrow=ncomb1*ncomb2,ncol=2))
+  #Output list set up
+  Output<-data.frame(matrix(c(jac1,tan1),nrow=ncombs,ncol=2))
   colnames(Output)<-c('Jaccard','Tanimoto')
-  TaniOut<-data.frame(matrix(tan1,nrow=ncomb1*ncomb2[1],ncol=1))
+  TaniOut<-data.frame(matrix(tan1,nrow=ncombs[1],ncol=1))
   colnames(TaniOut)<-c('Tanimoto')
   NullOut<-data.frame(matrix(tanN,nrow=ncombts,ncol = 1))
   colnames(NullOut)<-c('NullTani')
-  FinalOut<-list("Summary"=TaniOut,"Hold"=Output,"RankInfo"=tanmathold,"NullRankInfoFinal"=tanmatholdNW,"NullOut"=NullOut,'RankInfoFinal'=tanmatholdW,"RankInfoActual"=tanmatAFinal,"Actual"=taniActualF,"Boot"=list(combo1,combo2,combot1,combot2))
+  FinalOut<-list("Summary"=TaniOut,"Hold"=Output,"UnadjustedRankInfo"=tanmathold,"NullRankInfoFinal"=tanmatholdNW,"NullOut"=NullOut,'RankInfoFinal'=tanmatholdW,"RankInfoActual"=tanmatAFinal,"Actual"=taniActualF,"Boot"=list(combo1,combo2,combot1,combot2))
   return(FinalOut)
 }
+
+
 
 #Use this to convery vector of similarities into density distribution
 SimDisToProbDis<-function(similarityd,breaks=100){
@@ -1384,7 +1353,7 @@ SimKLD<-function(TestSim,RefSim,breaks=20){
 }
   
 InternalSimilarity<-function(filename,BootSet,kmin=1,rel=TRUE,MVCorrection=TRUE,mn=FALSE,logopt=FALSE,normvec=c('None')){
-  file1<-SimDataCleanLogA(filename,kmin,rel,normvector = normvec)
+  file1<-SimDataCleanLogA(filename,kmin,rel,normvector = normvec,logoption=logopt)
   glycopep1<-c(row.names(file1))
   glycojoint<-glycopep1
   glycopep2<-glycopep1
@@ -1449,38 +1418,51 @@ InternalSimilarity<-function(filename,BootSet,kmin=1,rel=TRUE,MVCorrection=TRUE,
   #prevent duplicate comparisons
   tracker1<-0
   ncomb2<-ncomb1-1
-  for (j in 1:ncomb2){
-    dT<-abs(T__Hold[,j]-T__Hold[,(j+1):ncomb1])
-    if (is.null(dim(dT))){
-      dT<-data.frame(matrix(dT,nrow=length(dT),ncol=1))
-      row.names(dT)<-row.names(T__Hold)
-    } else {
-      row.names(dT)<-row.names(T__Hold)
-    }
-    
-    presence<-(PHold[,j]+PHold[,(j+1):ncomb1])/2
-    if (mn==FALSE){
-      KTerm<-1+presence
-      if (is.null(dim(KTerm))){
-        KTerm<-data.frame(matrix(KTerm,nrow=length(KTerm),ncol=1))
-        row.names(KTerm)<-row.names(PHold)
-      } else {
-        row.names(KTerm)<-row.names(PHold)
-      }
-    } else {
-      KTerm<-mn
-    }
-    for (m in 1:length(TRef)){
-      tanmathold[(tracker1+1):(tracker1+ncomb1-j),TRef[m]]<-unlist(T__Hold[TRef[m],j]*T__Hold[TRef[m],(ncomb1+1+j):ncombt]*(KTerm[TRef[m],]^(-dT[TRef[m],])))
-    }
-    T11<-t(tanmathold[(tracker1+1):(tracker1+ncomb1-j),])
-    for (m in 1:length(TRef)){
-      tanmatholdW[TRef[m],(tracker1+1):(tracker1+ncomb1-j)]<-unlist(T11[TRef[m],]/(unlist(T10[j])+T01[-c(1:j)]-colSums(T11,na.rm=T)))
-    }
-    #remove possible combinations increment index
-    tracker1<-tracker1+ncomb1-j
+  TempSimObject<-SimilarityCalculation(T__Hold,T10,T01,PHold,ncomb1,ncomb1,mn)
+  tanmatholdW<-TempSimObject$Contribution
+  tan1<-TempSimObject$Similarity
+  # 
+  # for (j in 1:ncomb2){
+  #   dT1<-abs(T__Hold[,j]-T__Hold[,(j+1):ncomb1])
+  #   if (is.null(dim(dT))){
+  #     dT<-data.frame(matrix(dT,nrow=length(dT),ncol=1))
+  #     row.names(dT)<-row.names(T__Hold)
+  #   } else {
+  #     row.names(dT)<-row.names(T__Hold)
+  #   }
+  #   
+  #   presence<-(PHold[,j]+PHold[,(j+1):ncomb1])/2
+  #   if (mn==FALSE){
+  #     KTerm<-1+presence
+  #     if (is.null(dim(KTerm))){
+  #       KTerm<-data.frame(matrix(KTerm,nrow=length(KTerm),ncol=1))
+  #       row.names(KTerm)<-row.names(PHold)
+  #     } else {
+  #       row.names(KTerm)<-row.names(PHold)
+  #     }
+  #   } else {
+  #     KTerm<-mn
+  #   }
+  #   for (m in 1:length(TRef)){
+  #     tanmathold[(tracker1+1):(tracker1+ncomb1-j),TRef[m]]<-unlist(T__Hold[TRef[m],j]*T__Hold[TRef[m],(ncomb1+1+j):ncombt]*(KTerm[TRef[m],]^(-dT[TRef[m],])))
+  #   }
+  #   T11<-t(tanmathold[(tracker1+1):(tracker1+ncomb1-j),])
+  #   for (m in 1:length(TRef)){
+  #     tanmatholdW[TRef[m],(tracker1+1):(tracker1+ncomb1-j)]<-unlist(T11[TRef[m],]/(unlist(T10[j])+T01[-c(1:j)]-colSums(T11,na.rm=T)))
+  #   }
+  #   #remove possible combinations increment index
+  #   tracker1<-tracker1+ncomb1-j
+  # }
+  # tan1<-colSums(tanmatholdW)
+  #keep non self comparisons and non duplicates
+  keepidx<-c()
+  for (j in 1:ncomb1){
+    keepidx<-c(keepidx,(ncomb1*(j-1)+j):(ncomb1*j))
+    ident<-ncomb1*(j-1)+j
+    keepidx<-keepidx[-which(ident==keepidx)]
   }
-  tan1<-colSums(tanmatholdW)
+  tanmatholdW<-tanmatholdW[,keepidx]
+  tan1<-tan1[keepidx]
   
   
   OutputObj<-list("InternalTanimoto"=tan1,"InternalRankingInfo"=tanmatholdW)
@@ -1543,7 +1525,106 @@ InternalQuality<-function(filename,BootSet,SimilarityObj,PlotTitle,GroupName,Int
   #polygon(dN$x,k*dN$y/sum(dN$y),col=rgb(0,0,1,0.5))
   lines(dI$x,k*dI$y/sum(dI$y))
   polygon(c(-0.1001,dI$x,1.1001),c(0,k*dI$y/sum(dI$y),0),col=rgb(0,1,0,0.5))
-  lines(rep(TAct,2),c(0,100),col=1,lwd=3)
+  lines(rep(TAct,2),c(0,mh),col=1,lwd=3)
+  #percentile location
+  CompPerc<-ecdf(TDis)(TAct)
+  JointPerc<-ecdf(NDis)(TAct)
+  
+  Overlap<-OverlapData$PercOverlap
+  AlphaValue<-round(OverlapData$FP,3)
+  BetaValue<-round(OverlapData$FN,3)
+  
+  if (AlphaValue>(10^-10)){
+    #make alpha area
+    for (j in 1:(length(OverlapData$FPi)/2)){
+      jdxh<-j*2
+      jdxl<-(j-1)*2+1
+      fpi<-seq(OverlapData$FPi[jdxl],OverlapData$FPi[jdxh])
+      xi<-mean(c(dT$x[fpi[1]],dT$x[fpi[1]-1]),na.rm=T)
+      x0<-mean(c(dT$x[fpi[length(fpi)]],dT$x[fpi[length(fpi)]+1]),na.rm=T)
+      polygon(c(xi,dT$x[fpi],x0,x0),c(0,sdTy[fpi],sdTy[fpi[length(fpi)]],0),col='black')
+    }
+  }
+  if (BetaValue>(10^-10)){
+    #make beta area
+    for (j in 1:(length(OverlapData$FNi)/2)){
+      jdxh<-j*2
+      jdxl<-(j-1)*2+1
+      fni<-seq(OverlapData$FNi[jdxl],OverlapData$FNi[jdxh])
+      xi<-mean(c(dT$x[fni[1]],dT$x[fni[1]-1]),na.rm=T)
+      x0<-mean(c(dT$x[fni[length(fni)]],dT$x[fni[length(fni)]+1]),na.rm=T)
+      polygon(c(xi,dN$x[fni],x0,x0),c(0,sdIy[fni],sdIy[fni[length(fni)]],0),col='darkgrey')
+    }
+  }
+  
+  deltaIT<-(mean(IDis,na.rm=T)-mean(TDis,na.rm = T))
+  Confidence<-round(deltaIT/sd(IDis,na.rm=T)*10^(-AlphaValue-BetaValue),2)
+  if (legendval){
+    legend(legendpos,legend=c(paste('Observed Similarity in the',round(ecdf(TDis)(TAct),2)*100,'Percentile'),paste('Internal of',GroupName,'with Score=',Confidence),'Test Distribution',paste0(AlphaValue*100,'% False Positive Rate'),paste0(BetaValue*100,'% False Negative Rate')),fill=c(NA,3,2,'black','darkgrey'),lty=c(1,rep(NA,4)),lwd=c(3,NA,NA,NA,NA),density=c(0,NA,NA,NA,NA),border=c(NA,1,1,1,1))
+  }
+  if (verbose==T){
+    return(list(Int,Overlap,XPoint,CompPerc,JointPerc,Confidence,AlphaValue,BetaValue))
+  }
+
+  
+}
+
+InternalContributionPlot<-function(filename,BootSet,SimilarityObj,PlotTitle,TargetContribution,GroupName,Int=NULL,kmin=2,rel=TRUE,MVCorrection=TRUE,mn=FALSE,verbose=FALSE,legendpos='topleft',legendval=FALSE,xbound=c(0,1),logval=F){
+  if (!is.null(Int)){
+    #Use Int as Int object
+  } else {
+    Int<-InternalSimilarity(filename,BootSet,kmin,rel,MVCorrection,mn)
+  }
+  
+  k<-100
+  #build density
+  TDis<-SimilarityObj$RankInfoFinal[TargetContribution,]
+  TDis[is.infinite(TDis)]<-NA
+  dT<-density(TDis,from=-0.1,to=1.1,na.rm=T)
+  sdTy<-k*dT$y/sum(dT$y)
+  if (logval==T){
+    sdTy<-log(sdTy+1)
+    if (any(is.infinite(sdTy))){
+      sdTy[which(is.infinite(sdTy))]<-0
+    }
+  }
+  NDis<-SimilarityObj$NullRankInfoFinal[TargetContribution,]
+  NDis[is.infinite(NDis)]<-NA
+  dN<-density(NDis,from=-0.1,to=1.1,na.rm=T)
+  sdNy<-k*dN$y/sum(dN$y)
+  if (logval==T){
+    sdNy<-log(sdNy+1)
+    if (any(is.infinite(sdNy))){
+      sdNy[which(is.infinite(sdNy))]<-0
+    }
+  }
+  IDis<-Int$InternalRankingInfo[TargetContribution,]
+  IDis[is.infinite(IDis)]<-NA
+  dI<-density(IDis,from=-0.1,to=1.1,na.rm=T)
+  sdIy<-k*dI$y/sum(dI$y)
+  if (logval==T){
+    sdIy<-log(sdIy+1)
+    if (any(is.infinite(sdIy))){
+      sdIy[which(is.infinite(sdIy))]<-0
+    }
+  }
+  TAct<-SimilarityObj$RankInfoActual[TargetContribution]
+  OverlapData<-OverlapCalculator(IDis,TDis)
+  #plot densities
+  if (max(TDis)==0){
+    mh<-max(c(k*dI$y/sum(dI$y)))
+    plot(c(0,0,0.1,0.1),c(0,mh,mh,0),xlim=c(0,1),ylim=c(0,mh),main=PlotTitle,type='l',xlab='Similarity',ylab='% of Distribution')
+    polygon(c(0,0,0.1,0.1),c(0,mh,mh,0),col=rgb(1,0,0,0.5))
+  } else {
+    mh<-max(c(k*dT$y/sum(dT$y),k*dI$y/sum(dI$y)))
+    plot(dT$x,k*dT$y/sum(dT$y),ylim=c(0,mh),main=PlotTitle,type='l',xlab='Similarity',ylab='% of Distribution',xlim=xbound)
+    polygon(c(-0.1001,dT$x,1.1001),c(0,k*dT$y/sum(dT$y),0),col=rgb(1,0,0,0.5))
+  }
+  #lines(dN$x,k*dN$y/sum(dN$y))
+  #polygon(dN$x,k*dN$y/sum(dN$y),col=rgb(0,0,1,0.5))
+  lines(dI$x,k*dI$y/sum(dI$y))
+  polygon(c(-0.1001,dI$x,1.1001),c(0,k*dI$y/sum(dI$y),0),col=rgb(0,1,0,0.5))
+  lines(rep(TAct,2),c(0,mh),col=1,lwd=3)
   #percentile location
   CompPerc<-ecdf(TDis)(TAct)
   JointPerc<-ecdf(NDis)(TAct)
@@ -1578,35 +1659,28 @@ InternalQuality<-function(filename,BootSet,SimilarityObj,PlotTitle,GroupName,Int
   deltaIT<-1+(mean(IDis,na.rm=T)-mean(TDis,na.rm = T))
   Confidence<-round(deltaIT*log10((k*max(dI$y)/sum(dI$y))/var(IDis,na.rm=T)*10^(-AlphaValue-BetaValue)),2)
   if (legendval){
-    legend(legendpos,legend=c(paste('Observed Similarity in the',round(ecdf(TDis)(TAct),2)*100,'Percentile'),paste('Internal of',GroupName,'with Score=',Confidence),'Test Distribution',paste0(AlphaValue*100,'% False Positive Rate'),paste0(BetaValue*100,'% False Negative Rate')),fill=c(NA,3,2,'darkgrey','black'),lty=c(1,rep(NA,4)),lwd=c(3,NA,NA,NA,NA),density=c(0,NA,NA,NA,NA),border=c(NA,1,1,1,1))
+    legend(legendpos,legend=c(paste('Observed Similarity in the',round(ecdf(TDis)(TAct),2)*100,'Percentile'),paste('Internal of',GroupName,'with Score=',Confidence),'Test Distribution',paste0(AlphaValue*100,'% False Positive Rate'),paste0(BetaValue*100,'% False Negative Rate')),fill=c(NA,3,2,'black','darkgrey'),lty=c(1,rep(NA,4)),lwd=c(3,NA,NA,NA,NA),density=c(0,NA,NA,NA,NA),border=c(NA,1,1,1,1))
   }
   if (verbose==T){
     return(list(Int,Overlap,XPoint,CompPerc,JointPerc,Confidence,AlphaValue,BetaValue))
   }
-
-  
 }
 
 
 #ConfidenceScoreZFormat
 
-ConfidenceScore<-function(IntDist,SimDist){
+ConfidenceScore<-function(IntDist,SimDist,OverlapTotal){
   IntDens<-density(IntDist,na.rm=T)
   SimDens<-density(SimDist,na.rm=T)
-  sdI<-sd(IntDist,na.rm=T)
+  sdT<-sd(SimDist,na.rm=T)
   ET<-mean(SimDist,na.rm=T)
   EI<-mean(IntDist,na.rm=T)
-  overlaplist<-Overlap(SimDist,IntDist)
-  dSim<-abs(EI-ET)
-  c<-unname(unlist(overlaplist['PercOverlap']))/100
-  Score<-ScoreUnder(dSim,sdI,c)
+  n<-length(IntDist)
+  dSim<-EI-ET
+  Score<-dSim/(sdT/sqrt(n))*(max(IntDens$y)/sum(IntDens$y))
   return(Score)
 }
 
-ScoreUnder<-function(dSim,sdSim,c){
-  Score<-(dSim/sdI)*(1-c)
-  return(Score)
-}
 #Overlap Function
 Overlap<-function(Dis1,Dis2){
   density1<-density(Dis1,from=-0.1,to=1.1,na.rm=T)
@@ -1673,16 +1747,16 @@ SimPlot<-function(PlotTitle,SimilarityObj,legendpos='topleft',verbose=F,legendva
   #plot densities
   if (max(TDis)==0){
     mh<-max(sdNy)
-    plot(c(0,0,0.05,0.05),c(0,mh,mh,0),xlim=c(0,1),ylim=c(0,mh),main=PlotTitle,type='l',xlab='Similarity',ylab='Density')
+    plot(c(0,0,0.05,0.05),c(0,mh,mh,0),xlim=c(0,1),ylim=c(0,mh),main=PlotTitle,type='l',xlab='Similarity',ylab='% of Distribution')
     polygon(c(0,0,0.05,0.05),c(0,mh,mh,0),col=rgb(1,0,0,0.5))
   } else {
     mh<-max(c(sdNy,sdTy))
-    plot(dT$x,sdTy,xlim=xbound,ylim=c(0,mh),main=PlotTitle,type='l',xlab='Similarity',ylab='Density')
+    plot(dT$x,sdTy,xlim=xbound,ylim=c(0,mh),main=PlotTitle,type='l',xlab='Similarity',ylab='% of Distribution')
     polygon(c(-0.1001,dT$x,1.1001),c(0,sdTy,0),col=rgb(1,0,0,0.5))
   }
   lines(dN$x,sdNy)
   polygon(c(-0.1001,dN$x,1.1001),c(0,sdNy,0),col=rgb(0,0,1,0.5))
-  lines(rep(TAct,2),c(0,100),col=1,lwd=3)
+  lines(rep(TAct,2),c(0,mh),col=1,lwd=3)
   
   
   #percentile location
@@ -1690,7 +1764,7 @@ SimPlot<-function(PlotTitle,SimilarityObj,legendpos='topleft',verbose=F,legendva
   AlphaValue<-OverlapData$FP
   BetaValue<-OverlapData$FN
   if (legendval){
-    legend(legendpos,legend=c(paste('Observed Similarity in the',round(ecdf(TDis)(TAct),2)*100,'Percentile'),'Test Distribution','Null Distribution',paste0(round(AlphaValue,3)*100,'% False Positive Rate'),paste0(round(BetaValue,3)*100,'% False Negative Rate')),fill=c(NA,rgb(1,0,0,0.5),rgb(0,0,1,0.5),'darkgray','black'),lty=c(1,rep(NA,4)),density=c(0,NA,NA,NA,NA),border=c(NA,1,1,1,1))
+    legend(legendpos,legend=c(paste('Observed Similarity in the',round(ecdf(TDis)(TAct),2)*100,'Percentile'),'Test Distribution','Null Distribution',paste0(round(AlphaValue,3)*100,'% False Positive Rate'),paste0(round(BetaValue,3)*100,'% False Negative Rate')),fill=c(NA,rgb(1,0,0,0.5),rgb(0,0,1,0.5),'black','darkgray'),lty=c(1,rep(NA,4)),density=c(0,NA,NA,NA,NA),border=c(NA,1,1,1,1))
   }
   
   if (AlphaValue>(10^-10)){
@@ -1729,7 +1803,85 @@ SimPlotFromFile<-function(PlotTitle,filename1,filename2,kmin=2,rel=TRUE,MVCorrec
 }
 
 
-
+ContributionPlot<-function(PlotTitle,SimilarityObj,TargetContribution,legendpos='topleft',verbose=F,legendval=FALSE,xbound=c(0,1),logval=FALSE){
+  k<-100
+  #build density
+  TDis<-SimilarityObj$RankInfoFinal[TargetContribution,]
+  dT<-density(TDis,from=-0.1,to=1.1,na.rm=T)
+  sdTy<-k*dT$y/sum(dT$y)
+  if (logval==T){
+    sdTy<-log(sdTy+1)
+    if (any(is.infinite(sdTy))){
+      sdTy[which(is.infinite(sdTy))]<-0
+    }
+  }
+  
+  NDis<-SimilarityObj$NullRankInfoFinal[TargetContribution,]
+  dN<-density(NDis,from=-0.1,to=1.1,na.rm=T)
+  sdNy<-k*dN$y/sum(dN$y)
+  if (logval==T){
+    sdNy<-log(sdNy+1)
+    if (any(is.infinite(sdNy))){
+      sdNy[which(is.infinite(sdNy))]<-0
+    }
+  }
+  TAct<-SimilarityObj$RankInfoActual[TargetContribution]
+  
+  OverlapData<-OverlapCalculator(SimilarityObj$NullRankInfoFinal[TargetContribution,],SimilarityObj$RankInfoFinal[TargetContribution,])
+  if (logval==T){
+    #OverlapData<-OverlapCalculator(SimilarityObj$NullOut$NullTani,SimilarityObj$Summary$Tanimoto)
+  }
+  #plot densities
+  if (max(TDis)==0){
+    mh<-max(sdNy)
+    plot(c(0,0,0.05,0.05),c(0,mh,mh,0),xlim=c(0,1),ylim=c(0,mh),main=PlotTitle,type='l',xlab='Similarity',ylab='Density')
+    polygon(c(0,0,0.05,0.05),c(0,mh,mh,0),col=rgb(1,0,0,0.5))
+  } else {
+    mh<-max(c(sdNy,sdTy))
+    plot(dT$x,sdTy,xlim=xbound,ylim=c(0,mh),main=PlotTitle,type='l',xlab='Similarity',ylab='Density')
+    polygon(c(-0.1001,dT$x,1.1001),c(0,sdTy,0),col=rgb(1,0,0,0.5))
+  }
+  lines(dN$x,sdNy)
+  polygon(c(-0.1001,dN$x,1.1001),c(0,sdNy,0),col=rgb(0,0,1,0.5))
+  lines(rep(TAct,2),c(0,mh),col=1,lwd=3)
+  
+  
+  #percentile location
+  Overlap<-OverlapData$PercOverlap
+  AlphaValue<-OverlapData$FP
+  BetaValue<-OverlapData$FN
+  if (legendval){
+    legend(legendpos,legend=c(paste('Observed Similarity in the',round(ecdf(TDis)(TAct),2)*100,'Percentile'),'Test Distribution','Null Distribution',paste0(round(AlphaValue,3)*100,'% False Positive Rate'),paste0(round(BetaValue,3)*100,'% False Negative Rate')),fill=c(NA,rgb(1,0,0,0.5),rgb(0,0,1,0.5),'black','darkgray'),lty=c(1,rep(NA,4)),density=c(0,NA,NA,NA,NA),border=c(NA,1,1,1,1))
+  }
+  
+  if (AlphaValue>(10^-10)){
+    #make alpha area
+    for (j in 1:(length(OverlapData$FPi)/2)){
+      jdxh<-j*2
+      jdxl<-(j-1)*2+1
+      fpi<-seq(OverlapData$FPi[jdxl],OverlapData$FPi[jdxh])
+      xi<-mean(c(dT$x[fpi[1]],dT$x[fpi[1]-1]),na.rm=T)
+      x0<-mean(c(dT$x[fpi[length(fpi)]],dT$x[fpi[length(fpi)]+1]),na.rm=T)
+      polygon(c(xi,dT$x[fpi],x0,x0),c(0,sdTy[fpi],sdTy[fpi[length(fpi)]],0),col='black')
+    }
+  }
+  if (BetaValue>(10^-10)){
+    #make beta area
+    for (j in 1:(length(OverlapData$FNi)/2)){
+      jdxh<-j*2
+      jdxl<-(j-1)*2+1
+      fni<-seq(OverlapData$FNi[jdxl],OverlapData$FNi[jdxh])
+      xi<-mean(c(dT$x[fni[1]],dT$x[fni[1]-1]),na.rm=T)
+      x0<-mean(c(dT$x[fni[length(fni)]],dT$x[fni[length(fni)]+1]),na.rm=T)
+      polygon(c(xi,dN$x[fni],x0,x0),c(0,sdNy[fni],sdNy[fni[length(fni)]],0),col='darkgrey')
+    }
+  }
+  
+  if (verbose==T){
+    return(list(Overlap,TAct,'FalsePositiveRate'=AlphaValue,'FalseNegativeRate'=BetaValue))
+  }
+  
+}
 
 SimDensFunction<-function(datavec,xlim=c(0,1),smooth=T,bins=100){
   regions<-seq(xlim[1],xlim[2],by=((xlim[2]-xlim[1])/bins))
@@ -1757,7 +1909,7 @@ RankSimilarity<-function(RankInfo,PlotTitle){
 OverlapCalculator<-function(ReferenceDis,TestDis){
   #Let the distributions be the needed input
   dR<-density(ReferenceDis,from=-0.1,to=1.1)
-  dT<-density(TestDis,from=-.1,to=1.1)
+  dT<-density(TestDis,from=-.1,to=1.1,na.rm=T)
   if (max(TestDis)==0){
     dT$y<-rep(0,length(dT$y))
     dT$y[which(dT$x>=-0.001 & dT$x<=0.001)]<-1
@@ -2092,137 +2244,9 @@ RankingCriterion<-function(SimObj,ExclusionList='Default'){
   return(RankInfo)
 }
 
-DQAndRank<-function(ObsR,TestR,NullR,InternalR1,InternalR2,RankMethod='Else'){
-  #B12 is ranked mean RankInfo of file2 compared to distribution from file 1
-  #B21 is ranked mean RankInfo of file1 compared to distribution from file 2
-  RR1_2Hold<-RelativeRank(WithinRank1,BetweenRank12)
-  RR1_2<-RR1_2Hold$RelRank
-  RR2_1Hold<-RelativeRank(WithinRank2,BetweenRank21)
-  RR2_1<-RR2_1Hold$RelRank
-  RRTotal<-data.frame(matrix(NA,nrow=max(c(dim(WithinRank1$Summary)[1],dim(WithinRank1$Summary)[2])),ncol=2))
-  colnames(RRTotal)<-c('R1_2','R2_1')
-  RRTotal$R1_2<-RR1_2Hold$Summary
-  RRTotal$R2_1<-RR2_1Hold$Summary
-  R1_2List<-colnames(RR1_2)
-  R2_1List<-colnames(RR2_1)
-  Joint<-intersect(R1_2List,R2_1List)
-  DFRank<-data.frame(matrix(0,nrow=2,ncol=length(Joint)))
-  MSimL<-rep(0,length(Joint))
-  SDSimL<-rep(0,length(Joint))
-  colnames(DFRank)<-Joint
-  rownames(DFRank)<-c('Mean','SD')
-  QRank<-data.frame(matrix(0,nrow=8,ncol=length(Joint)))
-  colnames(QRank)<-Joint
-  rownames(QRank)<-c('Lower12','Lower21','Upper12','Upper21','IndicatorL','IndicatorU','IndicatorInvRL','IndicatorInvRU')
-  
-  #similarity of the two means and the two variances
-  # multiply similarity by inverse of the means and the variances
-  if (RankMethod=='Log'){
-    lRR1_2<-log(RR1_2)
-    minlR12<-min(lRR1_2[!is.infinite(lRR1_2)])
-    lRR1_2[is.infinite(lRR1_2)]<-minlR12
-    lRR2_1<-log(RR2_1)
-    minlR21<-min(lRR2_1[!is.infinite(lRR2_1)])
-    lRR2_1[is.infinite(lRR2_1)]<-minlR21
-    for (j in 1:length(Joint)){
-      idnm<-Joint[j]
-      meanR12<-mean(lRR1_2[,idnm],na.rm=T)
-      sdR12<-sd(lRR1_2[,idnm],na.rm=T)
-      meanR21<-mean(lRR2_1[,idnm],na.rm=T)
-      sdR21<-sd(lRR2_1[,idnm],na.rm=T)
-      MeanSim<-meanR12*meanR21/(meanR12^2+meanR21^2-meanR12*meanR21)
-      MSimL[j]<-MeanSim
-      SDSim<-sdR12*sdR21/(sdR12^2+sdR21^2-sdR12*sdR21)
-      SDSimL[j]<-SDSim
-      DFRank[1,idnm]<-MeanSim*(1/mean(c(lRR1_2[,idnm],lRR2_1[,idnm]),na.rm=T)) #Sim*InvMean
-      DFRank[2,idnm]<-SDSim*(1/sd(c(lRR1_2[,idnm],lRR2_1[,idnm]),na.rm=T)) #Sim*InvSD
-      
-      AmeanR12<-mean(RR1_2[,idnm],na.rm=T)
-      AsdR12<-sd(RR1_2[,idnm],na.rm=T)
-      AmeanR21<-mean(RR2_1[,idnm],na.rm=T)
-      AsdR21<-sd(RR2_1[,idnm],na.rm=T)
-      err12<-qnorm(0.975)*AsdR12/sqrt(dim(RR1_2)[1]-sum(is.na(RR1_2[,idnm])))
-      err21<-qnorm(0.975)*AsdR21/sqrt(dim(RR2_1)[1]-sum(is.na(RR2_1[,idnm])))
-      QRank[1,idnm]<-AmeanR12-err12
-      QRank[2,idnm]<-AmeanR21-err21
-      QRank[3,idnm]<-AmeanR12+err12
-      QRank[4,idnm]<-AmeanR21+err21
-      QRank[5,idnm]<-(QRank[1,idnm]<1 && QRank[2,idnm]<1)
-      QRank[6,idnm]<-(QRank[3,idnm]<1 && QRank[4,idnm]<1)
-      QRank[7,idnm]<-(QRank[1,idnm]<mean(RRTotal$R1_2,na.rm=T)^-1 && QRank[2,idnm]<mean(RRTotal$R2_1,na.rm=T)^-1)
-      QRank[8,idnm]<-(QRank[3,idnm]<mean(RRTotal$R1_2,na.rm=T)^-1 && QRank[4,idnm]<mean(RRTotal$R2_1,na.rm=T)^-1)
-    }
-  } else if (RankMethod!='Log'){
-    for (j in 1:length(Joint)){
-      idnm<-Joint[j]
-      meanR12<-mean(RR1_2[,idnm],na.rm=T)
-      sdR12<-sd(RR1_2[,idnm],na.rm=T)
-      meanR21<-mean(RR2_1[,idnm],na.rm=T)
-      sdR21<-sd(RR2_1[,idnm],na.rm=T)
-      MeanSim<-meanR12*meanR21/(meanR12^2+meanR21^2-meanR12*meanR21)
-      MSimL[j]<-MeanSim
-      SDSim<-sdR12*sdR21/(sdR12^2+sdR21^2-sdR12*sdR21)
-      SDSimL[j]<-SDSim
-      DFRank[1,idnm]<-MeanSim*(1/mean(c(RR1_2[,idnm],RR2_1[,idnm]),na.rm=T)) #Sim*InvMean
-      DFRank[2,idnm]<-SDSim*(1/sd(c(RR1_2[,idnm],RR2_1[,idnm]),na.rm=T)) #Sim*InvSD
-      err12<-qnorm(0.975)*sdR12/sqrt(dim(RR1_2)[1]-sum(is.na(RR1_2[,idnm])))
-      err21<-qnorm(0.975)*sdR21/sqrt(dim(RR2_1)[1]-sum(is.na(RR2_1[,idnm])))
-      QRank[1,idnm]<-meanR12-err12
-      QRank[2,idnm]<-meanR21-err21
-      QRank[3,idnm]<-meanR12+err12
-      QRank[4,idnm]<-meanR21+err21
-      QRank[5,idnm]<-(QRank[1,idnm]<1 && QRank[2,idnm]<1)
-      QRank[6,idnm]<-(QRank[3,idnm]<1 && QRank[4,idnm]<1)
-      QRank[7,idnm]<-(QRank[1,idnm]<mean(RRTotal$R1_2,na.rm=T)^-1 && QRank[2,idnm]<mean(RRTotal$R2_1,na.rm=T)^-1)
-      QRank[8,idnm]<-(QRank[3,idnm]<mean(RRTotal$R1_2,na.rm=T)^-1 && QRank[4,idnm]<mean(RRTotal$R2_1,na.rm=T)^-1)
-      
-    }
-  }
-  
-  
-  
-  Output<-list('RankData'=DFRank,'QualityCheck'=QRank,'MeanSim'=MSimL,'SDSim'=SDSimL,'RankTotal'=RRTotal)
-  return(Output)
-  
-}
-
-RankListMaker<-function(WtihinRank1,WithinRank2,BetweenRank12,BetweenRank21){
-  #Take Aggregate Object and Produce list of IDs:
-  ## are too low quality
-  ## Ranking
-  ## 
-  
-  AggregateObj<-RankAggregate(WithinRank1,WithinRank2,BetweenRank12,BetweenRank21)
-  RRT12<-mean(AggregateObj$RankTotal[,1],na.rm = T)
-  RRT21<-mean(AggregateObj$RankTotal[,2],na.rm = T)
-  
-  if (mean(AggregateObj$RankTotal[,1],na.rm=T)>1 & mean(AggregateObj$RankTotal[,2],na.rm=T)>1){
-    print('Datasets 1 & 2 are both Below Overall Quality Threshold.')
-  } else if (mean(AggregateObj$RankTotal[,1],na.rm=T)>1 & mean(AggregateObj$RankTotal[,2],na.rm=T)<=1){
-    print('Dataset 2 is Below Quality Threshold; Dataset 1 may be a subset of the more broadly defined Dataset 2.')
-  } else if (mean(AggregateObj$RankTotal[,1],na.rm=T)<=1 & mean(AggregateObj$RankTotal[,2],na.rm=T)>1){
-    print('Dataset 1 is Below Quality Threshold; Dataset 2 may be a subset of the more broadly defined Dataset 1.')
-  } else {
-    print('Datasets 1 & 2 are both Above Overall Quality Threshold.')
-    NumIDs<-dim(AggregateObj$QualityCheck)[2]
-    LBound12<-AggregateObj$QualityCheck['Lower12',]<RRT12
-    LBound21<-AggregateObj$QualityCheck['Lower21',]<RRT21
-    for (j in 1:NumIDs){
-      
-    }
-  }
-  
-  
-}
-
-
-
-
-
-
 #MissingValue Counter and Plotter
 MVCountPlot<-function(filename,PlotTitle,HistTitle,AbunTitle,kmin=1,plotV=TRUE){
-  file1<-SimDataClean(filename,kmin) #load file
+  file1<-SimDataCleanLogA(filename,kmin) #load file
   jlen<-dim(file1)[1] # glycopeptides
   jtot<-dim(file1)[2] # samples
   mvhold<-rep(0,jlen) # glycopeptides missing value holder
@@ -2250,7 +2274,7 @@ MVCountPlot<-function(filename,PlotTitle,HistTitle,AbunTitle,kmin=1,plotV=TRUE){
 
 #MVPlottervAbundance
 MVAbun<-function(filename,AbunTitle,kmin=1,rel=TRUE){
-  file1<-SimDataClean(filename,kmin,rel)
+  file1<-SimDataCleanLogA(filename,kmin,rel)
   jlen<-dim(file1)[1]
   jtot<-dim(file1)[2]
   mvhold<-rep(0,jlen)
@@ -2287,8 +2311,8 @@ RAMZISMain<-function(){
 
 #Function to separate glycopeptides by same peptide backbone
 PeptideSegment<-function(filename1,filename2,kmin=2,simtype="Tanimoto",rel=TRUE,OverallName,SampleName1,SampleName2,mn=FALSE,logopt=FALSE){
-  datfile1<-SimDataCleanLog(filename1,kmin=kmin,rel = rel)
-  datfile2<-SimDataCleanLog(filename2,kmin=kmin,rel = rel)
+  datfile1<-SimDataCleanLogA(filename1,kmin=kmin,rel = rel)
+  datfile2<-SimDataCleanLogA(filename2,kmin=kmin,rel = rel)
   Rnames1<-row.names(datfile1)
   Cleaned1<-gsub("\\s*\\{[^\\}]+\\}","",gsub("\\s*\\([^\\)]+\\)","",Rnames1))
   UniCle1<-unique(Cleaned1)
