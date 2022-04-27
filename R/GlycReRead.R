@@ -1,3 +1,15 @@
+#' GlycReRead: Read a set of GlycReSoft files and collate them into a joint dataset
+#'
+#' @param Filelist A vector of exported GlycReSoft results files (.csv) of at least length 1.
+#' @param Outfilename The save location for the collective dataset (don't include a filetype). If unused results will not be saved.
+#' @param verbose Default: TRUE  Returns dataset to environment
+#'
+#' @return Matrix of glycopeptide abundances with glycopeptides as rows and samples as columns
+#' @export
+#'
+#' @examples
+#' #files<-c('gsoft1.csv','gsoft2.csv','gsoft3.csv')
+#' #AbundanceDF<-GlycReRead(files,'OutputSaveFile')
 GlycReRead<-function(Filelist,Outfilename=NULL,verbose=T){
   if (length(Filelist)==1){
     GFiles<-read.table(Filelist,stringsAsFactors = FALSE)

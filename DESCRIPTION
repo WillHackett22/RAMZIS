@@ -13,15 +13,13 @@ Authors@R:
            comment = c(ORCID = "0000-0002-6542-4977")),
 	  person(given = "Luis",
            family = "Carvalho",
-           role = c("aut"),
-           comment = c(ORCID = "")),
+           role = c("aut")),
 	  person(given = "Joseph",
            family = "Zaia",
-           role = c("aut"),
-           comment = c(ORCID = "")))
-Description: A toolset to compare m/z identifications, primarily glycopeptides
+           role = c("aut")))
+Description: A toolset to compare m/z identifications, primarily glycopeptides,
 	by their abundances through comparative similarity.
-License: `use_mit_license()`
+License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
@@ -29,4 +27,5 @@ RoxygenNote: 7.1.2
 Imports: 
     MASS,
     gtools,
-    utils
+    utils,
+    ggplot2
