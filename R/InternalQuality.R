@@ -34,7 +34,7 @@ InternalQuality<-function(filename,BootSet,SimilarityObj,PlotTitle,GroupName,Int
   #build density
   TDis<-SimilarityObj$Summary$Tanimoto
   TDis[is.infinite(TDis)]<-NA
-  dT<-density(TDis,from=-0.1,to=1.1,na.rm=T)
+  dT<-DENSITY_RD(TDis)
   sdTy<-k*dT$y/sum(dT$y)
   if (logval==T){
     sdTy<-log(sdTy+1)

@@ -14,7 +14,7 @@ TestMembershipProportion<-function(SimDist,BootDis1,BootDis2,ModalityList){
   BootCombinations[,1]<-rep(seq(1,dim(BootDis1)[1]),each=dim(BootDis2)[1])
   BootCombinations[,2]<-rep(seq(1,dim(BootDis2)[1]),dim(BootDis1)[1])
   #make density
-  SimDens<-density(SimDist)
+  SimDens<-DENSITY_RD(SimDist)
   #find minima
   LocalMinimaIdx<-ModalityList$Minima
   idxL<-length(LocalMinimaIdx)+1

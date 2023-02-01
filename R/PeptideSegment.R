@@ -16,8 +16,8 @@
 #'
 #' @examples #
 PeptideSegment<-function(filename1,filename2,kmin=2,simtype="Tanimoto",rel=TRUE,OverallName,SampleName1,SampleName2,mn=FALSE,logopt=TRUE){
-  datfile1<-SimDataCleanLogA(filename1,kmin=kmin,rel = rel)
-  datfile2<-SimDataCleanLogA(filename2,kmin=kmin,rel = rel)
+  datfile1<-SimDataClean(filename1,kmin=kmin,rel = rel)
+  datfile2<-SimDataClean(filename2,kmin=kmin,rel = rel)
   Rnames1<-row.names(datfile1)
   Cleaned1<-gsub("\\s*\\{[^\\}]+\\}","",gsub("\\s*\\([^\\)]+\\)","",Rnames1))
   UniCle1<-unique(Cleaned1)

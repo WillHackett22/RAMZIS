@@ -10,7 +10,7 @@
 #'
 #' @examples #
 PeptideCollapser<-function(filename,kmin=2,rel=TRUE,sequonvector){
-  datfile1<-SimDataCleanLogA(filename,kmin,rel)
+  datfile1<-SimDataClean(filename,kmin,rel)
   #find sequon sections
   #find glycans associated with a sequon
   #merge same glycans for a given sequon

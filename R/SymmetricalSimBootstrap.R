@@ -15,8 +15,8 @@
 #' @examples #
 SymmetricalSimBootstrap<-function(filename1,filename2,kmin=2,rel=TRUE,MVCorrection=TRUE,mn=FALSE,logopt=TRUE,normvec=c('None','None')){
   #load data and acquire glycopeptides
-  file1<-SimDataCleanLogA(filename1,kmin,rel,normvector = normvec[1])
-  file2<-SimDataCleanLogA(filename2,kmin,rel,normvector = normvec[2])
+  file1<-SimDataClean(filename1,kmin,rel,normvector = normvec[1])
+  file2<-SimDataClean(filename2,kmin,rel,normvector = normvec[2])
   glycopep1<-c(row.names(file1))
   glycopep2<-c(row.names(file2))
   glycojoint<-unique(c(glycopep1,glycopep2))

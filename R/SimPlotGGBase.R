@@ -9,7 +9,7 @@
 #'
 #' @return
 #' @export
-#' @import ggplot22
+#' @import ggplot2
 #'
 #' @examples
 SimPlotGGBase<-function(PlotTitle,dfSim,RefName,OverlapData,Confidence=NULL,legend.bool=T){

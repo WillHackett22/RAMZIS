@@ -23,8 +23,8 @@
 RAMZISMain<-function(filename1,filename2,alpha=0.05,beta=0.20,conf_thresh=2,int_thresh=0.25,observedbounds=c("ZScore",3),
                      kmin=2,kmin_int=1,rel=TRUE,MVCorrection=TRUE,mn=FALSE,verbose=T,logopt=FALSE,normvec=c('None','None')){
   #load data and clean
-  df1<-SimDataCleanLogA(filename1,kmin,rel,normvector = normvec[1])
-  df2<-SimDataCleanLogA(filename2,kmin,rel,normvector = normvec[2])
+  df1<-SimDataClean(filename1,kmin,rel,normvector = normvec[1])
+  df2<-SimDataClean(filename2,kmin,rel,normvector = normvec[2])
   mergedf<-MatrixMerge_Helper(df1,df2)
   coln1<-dim(df1)[2]
   coln2<-dim(df2)[2]
