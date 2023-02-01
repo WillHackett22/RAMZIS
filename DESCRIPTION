@@ -1,0 +1,31 @@
+Package: RAMZIS1
+Title: Ranking Assessment of m/z Identifications by Similarity
+Version: 0.0.0.9000
+Authors@R: 
+    c(person(given = "William",
+           family = "Hackett",
+           role = c("aut", "cre"),
+           email = "wehacket@bu.edu",
+           comment = c(ORCID = "0000-0001-8225-0916")),
+	  person(given = "Deborah",
+           family = "Chang",
+           role = c("aut"),
+           comment = c(ORCID = "0000-0002-6542-4977")),
+	  person(given = "Luis",
+           family = "Carvalho",
+           role = c("aut")),
+	  person(given = "Joseph",
+           family = "Zaia",
+           role = c("aut")))
+Description: A toolset to compare m/z identifications, primarily glycopeptides,
+	by their abundances through comparative similarity.
+License: MIT + file LICENSE
+Encoding: UTF-8
+LazyData: true
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.1.2
+Imports: 
+    MASS,
+    gtools,
+    utils,
+    ggplot2
