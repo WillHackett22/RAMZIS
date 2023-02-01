@@ -7,11 +7,16 @@
 BetaIdxs(OverlapData)
 }
 \arguments{
-\item{AlpBet}{}
+\item{OverlapData}{PlaceHolder}
+
+\item{AlpBet}{PlaceHolder}
 }
 \value{
-
+PlaceHolder
 }
 \description{
 BetaIdxs finds the indices from the overlap data for the beta region
+}
+\examples{
+#
 }

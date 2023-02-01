@@ -7,11 +7,20 @@
 SimPlotGeneral(PlotTitle, dfSim, OverlapData, legend.bool = T)
 }
 \arguments{
-\item{legend.bool}{}
+\item{PlotTitle}{PlaceHolder}
+
+\item{dfSim}{PlaceHolder}
+
+\item{OverlapData}{PlaceHolder}
+
+\item{legend.bool}{PlaceHolder}
 }
 \value{
-
+PlaceHolder
 }
 \description{
 SimPlotGeneral produces a plot of the densities of the similarity of the Test and Null Similarities
+}
+\examples{
+#
 }

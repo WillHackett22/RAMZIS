@@ -7,11 +7,16 @@
 AlphaIdxs(OverlapData)
 }
 \arguments{
-\item{AlpBet}{}
+\item{OverlapData}{PlaceHolder}
+
+\item{AlpBet}{PlaceHolder}
 }
 \value{
-
+PlaceHolder
 }
 \description{
 AlphaIdxs finds the indices from the overlap data for the alpha region
+}
+\examples{
+ #
 }

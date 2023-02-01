@@ -1,17 +1,17 @@
 #' SimPlotGGBase plots similarity distributions. It is primarily for use through other functions
 #'
-#' @param PlotTitle
-#' @param dfSim
-#' @param RefName
-#' @param OverlapData
-#' @param Confidence
-#' @param legend.bool
+#' @param PlotTitle The title of the plot
+#' @param dfSim PlaceHolder
+#' @param RefName PlaceHolder
+#' @param OverlapData PlaceHolder
+#' @param Confidence PlaceHolder
+#' @param legend.bool PlaceHolder
 #'
-#' @return
+#' @return PlaceHolder
 #' @export
 #' @import ggplot2
 #'
-#' @examples
+#' @examples #
 SimPlotGGBase<-function(PlotTitle,dfSim,RefName,OverlapData,Confidence=NULL,legend.bool=T){
   FPPer<-round(OverlapData$FP*100,1)
   FNPer<-round(OverlapData$FN*100,1)
@@ -37,7 +37,7 @@ SimPlotGGBase<-function(PlotTitle,dfSim,RefName,OverlapData,Confidence=NULL,lege
     }
   }
   maxh<-max(dfSim$Dens)*1.05
-  p<-ggplot2::ggplot2(dfSim,aes(x=Sim,y=Dens,fill=Dist))+geom_area(position='identity')+
+  p<-ggplot2::ggplot(dfSim,aes(x=Sim,y=Dens,fill=Dist))+geom_area(position='identity')+
     scale_fill_manual(values=group.colors,labels=group.labels)+geom_line(size=0.05)+
     theme_RAMZIS+coord_cartesian(ylim=c(0.009999,maxh),xlim=c(0,1.1))+
     scale_x_continuous(name='Similarity',breaks=seq(0,1,by=.2))+

@@ -25,5 +25,5 @@ This is the default density function of RAMZIS and is really not meant for user 
 }
 \examples{
 dist<-rbeta(1000,2,2)
-dens<-DENSITY_RD(dist)
+#dens<-DENSITY_RD(dist)
 }

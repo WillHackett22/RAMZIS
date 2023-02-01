@@ -42,3 +42,6 @@ InternalSimilarityFunction
 For calculating the similarity between a sampling of datasets and itself.
 It does not allow chance identical comparisons. (eg. Sampling 1,1,1 will never be compared to Sampling 1,1,1)
 }
+\examples{
+#
+}

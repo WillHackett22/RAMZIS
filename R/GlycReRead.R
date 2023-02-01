@@ -6,13 +6,14 @@
 #'
 #' @return Matrix of glycopeptide abundances with glycopeptides as rows and samples as columns
 #' @export
+#' @import utils
 #'
 #' @examples
 #' #files<-c('gsoft1.csv','gsoft2.csv','gsoft3.csv')
 #' #AbundanceDF<-GlycReRead(files,'OutputSaveFile')
 GlycReRead<-function(Filelist,Outfilename=NULL,verbose=T){
   if (length(Filelist)==1){
-    GFiles<-read.table(Filelist,stringsAsFactors = FALSE)
+    GFiles<-utils::read.table(Filelist,stringsAsFactors = FALSE)
     GFiles<-GFiles[,1]
   } else {
     GFiles<-Filelist
@@ -24,7 +25,7 @@ GlycReRead<-function(Filelist,Outfilename=NULL,verbose=T){
   FNameA<-strsplit(FileG,'\\/')[[1]][length(strsplit(FileG,'\\/')[[1]])]
   FNameB<-strsplit(FNameA,'\\.csv')[[1]][length(strsplit(FNameA,'\\.csv')[[1]])]
   NameHold[1]<-FNameB
-  GFile<-read.csv(FileG,header=TRUE,stringsAsFactors = FALSE)
+  GFile<-utils::read.csv(FileG,header=TRUE,stringsAsFactors = FALSE)
   if (sum(GFile$total_signal==0)>0){
     GFile<-GFile[-which(GFile$total_signal==0),]
   }
@@ -81,7 +82,7 @@ GlycReRead<-function(Filelist,Outfilename=NULL,verbose=T){
   row.names(tempdata)<-gpeprow
 
   if (!is.null(Outfilename)){
-    write.csv(tempdata,paste0(Outfilename,'.csv'))
+    utils::write.csv(tempdata,paste0(Outfilename,'.csv'))
   }
   if (verbose){
     return(outlist)

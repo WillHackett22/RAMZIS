@@ -14,7 +14,7 @@
 #'
 #' @examples #
 InternalSimilarity<-function(filename,BootSet,kmin=1,rel=TRUE,MVCorrection=TRUE,mn=FALSE,logopt=TRUE,normvec=c('None')){
-  file1<-SimDataCleanLogA(filename,kmin,rel,normvector = normvec,logoption=logopt)
+  file1<-SimDataClean(filename,kmin,rel,normvector = normvec,logoption=logopt)
   glycopep1<-c(row.names(file1))
   glycojoint<-glycopep1
   glycopep2<-glycopep1

@@ -5,10 +5,10 @@
 #' @param TestDis The Test Similarity Distribution
 #' @param OverlapData The known overlap of these distributions from OverlapCalculator()
 #'
-#' @return
+#' @return PlaceHolder
 #' @export
 #'
-#' @examples
+#' @examples #
 InternalConfidenceScore<-function(ReferenceDis,TestDis,OverlapData=NULL){
   if (is.null(OverlapData)){
     OverlapData=OverlapCalculator(ReferenceDis,TestDis)

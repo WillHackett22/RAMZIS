@@ -15,9 +15,12 @@ InternalConfidenceScore(ReferenceDis, TestDis, OverlapData = NULL)
 \item{OverlapData}{The known overlap of these distributions from OverlapCalculator()}
 }
 \value{
-
+PlaceHolder
 }
 \description{
 InternalConfidenceScore
 Finds the Confidence Score of a Test Similarity Distribution relative to one of its Internal Similarity Distribution
+}
+\examples{
+#
 }

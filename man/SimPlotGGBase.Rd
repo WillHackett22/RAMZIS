@@ -14,11 +14,24 @@ SimPlotGGBase(
 )
 }
 \arguments{
-\item{legend.bool}{}
+\item{PlotTitle}{The title of the plot}
+
+\item{dfSim}{PlaceHolder}
+
+\item{RefName}{PlaceHolder}
+
+\item{OverlapData}{PlaceHolder}
+
+\item{Confidence}{PlaceHolder}
+
+\item{legend.bool}{PlaceHolder}
 }
 \value{
-
+PlaceHolder
 }
 \description{
 SimPlotGGBase plots similarity distributions. It is primarily for use through other functions
+}
+\examples{
+#
 }

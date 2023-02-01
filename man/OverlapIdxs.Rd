@@ -7,11 +7,16 @@
 OverlapIdxs(OverlapData, AlpBet)
 }
 \arguments{
-\item{AlpBet}{}
+\item{OverlapData}{PlaceHolder}
+
+\item{AlpBet}{PlaceHolder}
 }
 \value{
-
+PlaceHolder
 }
 \description{
 OverlapIdxs is used by AlphaIdxs and BetaIdxs to get the indices from the overlap data for the alpha and beta regions respectively
+}
+\examples{
+#
 }

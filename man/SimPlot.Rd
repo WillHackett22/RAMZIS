@@ -19,7 +19,7 @@ SimPlot(
 \arguments{
 \item{PlotTitle}{Plot Title string}
 
-\item{SimilarityObj}{Test and Null Similarity Object}
+\item{SimilarityObj}{Test and Null Similarity Object from SymmetricalSimBootstrap()}
 
 \item{legendpos}{legend position}
 

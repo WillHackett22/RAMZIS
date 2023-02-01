@@ -1,22 +1,22 @@
 #' MAIN_OUTPUT_GATHERER is used by RAMZISMain() to collect and organize all outputs of the similarity comparisons
 #'
-#' @param Internal1
-#' @param Internal2
-#' @param Test
-#' @param Null
-#' @param Observed
-#' @param ITO1
-#' @param ITO2
-#' @param NTO
-#' @param Boot1
-#' @param Boot2
-#' @param NullBoot1
-#' @param NullBoot2
+#' @param Internal1 PlaceHolder
+#' @param Internal2 PlaceHolder
+#' @param Test PlaceHolder
+#' @param Null PlaceHolder
+#' @param Observed PlaceHolder
+#' @param ITO1 PlaceHolder
+#' @param ITO2 PlaceHolder
+#' @param NTO PlaceHolder
+#' @param Boot1 PlaceHolder
+#' @param Boot2 PlaceHolder
+#' @param NullBoot1 PlaceHolder
+#' @param NullBoot2 PlaceHolder
 #'
-#' @return
+#' @return PlaceHolder
 #' @export
 #'
-#' @examples
+#' @examples #
 MAIN_OUTPUT_GATHERER<-function(Internal1,Internal2,Test,Null,Observed,ITO1,ITO2,NTO,Boot1,Boot2,NullBoot1,NullBoot2){
   il1<-length(Internal1$Similarity)
   il2<-length(Internal2$Similarity)

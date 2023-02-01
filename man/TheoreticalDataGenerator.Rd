@@ -42,7 +42,7 @@ Theoretical dataset
 TheoreticalDataGenerator makes a theoretical dataset of relative abundances
 }
 \examples{
-data<-TheoreticalDataGenerator(5,20,0.7,5.5,alp=seq(100,2000,by=100),bet=seq(2000,100,by=-100))
+#data<-TheoreticalDataGenerator(5,20,0.7,5.5,alp=seq(100,2000,by=100),bet=seq(2000,100,by=-100))
 #data$Dataset is a dataset with 5 samples and 20 identifications (glycopeptides)
 #the means of data will trend from 0 to 1
 }

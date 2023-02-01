@@ -14,7 +14,7 @@
 #' @return Distribution of Internal similarities and their contributions
 #' @export
 #'
-#' @examples
+#' @examples #
 InternalSimilarityFunction<-function(filename,BootSet,kmin=1,rel=TRUE,MVCorrection=TRUE,mn=FALSE,logopt=FALSE,normvec=c('None')){
   df1<-SimDataClean(filename,kmin,rel,normvector = normvec,logoption=logopt)
   glycopep1<-c(row.names(df1))
