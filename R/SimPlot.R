@@ -20,7 +20,7 @@ SimPlot<-function(PlotTitle,SimilarityObj,legendpos='topleft',verbose=F,legendva
   k<-100
   #build density
   TDis<-SimilarityObj$Summary$Tanimoto
-  dT<-DESNITY_RD(TDis)
+  dT<-DENSITY_RD(TDis)
   sdTy<-k*dT$y/sum(dT$y)
   if (logval==T){
     sdTy<-log(sdTy+1)
@@ -30,7 +30,7 @@ SimPlot<-function(PlotTitle,SimilarityObj,legendpos='topleft',verbose=F,legendva
   }
 
   NDis<-SimilarityObj$NullOut$NullTani
-  dN<-DESNITY_RD(NDis)
+  dN<-DENSITY_RD(NDis)
   sdNy<-k*dN$y/sum(dN$y)
   if (logval==T){
     sdNy<-log(sdNy+1)

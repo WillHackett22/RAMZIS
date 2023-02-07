@@ -7,14 +7,14 @@
 #' @param MVCorrection Boolean missing value correction, if disabled it turns 0s to NAs. Default=TRUE
 #' @param mn Default=FALSE. In default settings it adjusts the distance scaling by average presence. Setting it to a numeric value will use that as a constant instead. (Recommended 1:2)
 #' @param logopt Boolean indicating the use of the log transform before relative scaling of abundance. Default=TRUE
-#' @param normvec Optional: the normalization vectors to adjust signal abundance between samples. Default=c('None')
+#' @param normvec Optional: the normalization vectors to adjust signal abundance between samples. Default=list('None')
 #'
 #' @return Internal Similarity Object
 #' @export
 #'
 #' @examples #
-InternalSimilarity<-function(filename,BootSet,kmin=1,rel=TRUE,MVCorrection=TRUE,mn=FALSE,logopt=TRUE,normvec=c('None')){
-  file1<-SimDataClean(filename,kmin,rel,normvector = normvec,logoption=logopt)
+InternalSimilarity<-function(filename,BootSet,kmin=1,rel=TRUE,MVCorrection=TRUE,mn=FALSE,logopt=TRUE,normvec=list('None')){
+  file1<-SimDataClean(filename,kmin,rel,normvector = unlist(normvec),logoption=logopt)
   glycopep1<-c(row.names(file1))
   glycojoint<-glycopep1
   glycopep2<-glycopep1

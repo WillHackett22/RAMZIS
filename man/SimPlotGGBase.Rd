@@ -10,24 +10,27 @@ SimPlotGGBase(
   RefName,
   OverlapData,
   Confidence = NULL,
-  legend.bool = T
+  legend.bool = T,
+  themepick = theme_RAMZIS
 )
 }
 \arguments{
 \item{PlotTitle}{The title of the plot}
 
-\item{dfSim}{PlaceHolder}
+\item{dfSim}{TIDY Formatted Similarity Distributions}
 
-\item{RefName}{PlaceHolder}
+\item{RefName}{Reference Distribution Name. ("Null","Internal1","Internal2","All")}
 
-\item{OverlapData}{PlaceHolder}
+\item{OverlapData}{Overlap data from OverlapCalculator}
 
-\item{Confidence}{PlaceHolder}
+\item{Confidence}{Internal Confidence Score. Do not touch if doing TestNull Plot. DEFAULT=NULL}
 
-\item{legend.bool}{PlaceHolder}
+\item{legend.bool}{Boolean indicating whether or not to produce the legend. Default=T}
+
+\item{themepick}{Default=theme_RAMZIS. Theme object from ggplot2 for formatting.}
 }
 \value{
-PlaceHolder
+A similarity plot using ggplot2
 }
 \description{
 SimPlotGGBase plots similarity distributions. It is primarily for use through other functions

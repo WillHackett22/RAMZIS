@@ -7,25 +7,30 @@
 #' @export
 #'
 #' @examples #
-OverlapCalculator<-function(ReferenceDis,TestDis){
+OverlapCalculator<-function(ReferenceDis,TestDis,zerohandling=F){
   #Let the distributions be the needed input
-  dR<-density(ReferenceDis,from=-0.1,to=1.1)
-  dT<-density(TestDis,from=-.1,to=1.1,na.rm=T)
+  dR<-DENSITY_RD(ReferenceDis)
+  dT<-DENSITY_RD(TestDis)
   if (max(TestDis)==0){
     dT$y<-rep(0,length(dT$y))
-    dT$y[which(dT$x>=-0.001 & dT$x<=0.001)]<-1
+    if (zerohandling){
+      dT$y[c(43,44)]<-1/(dT$x[44]-dT$x[43])
+    } else {
+      dT$y[which(dT$x>=-0.001 & dT$x<=0.001)]<-1
+    }
   }
   sdT<-dT$y/sum(dT$y)
   sdR<-dR$y/sum(dR$y)
   #FP == Ref greater than Test
-  FalsePosIDX<-which((sdT<sdR) & (sdT>0.000009))
+  FalsePosIDX<-which((sdT<sdR) & (sdT>0.0001*max(sdT)))
   FP_T_ecdf<-ecdf(TestDis)
   #FN == Test greater than Ref
-  FalseNegIDX<-which((sdT>=sdR) & (sdR>0.000009))
+  FalseNegIDX<-which((sdT>=sdR) & (sdR>0.0001*max(sdR)))
   FN_R_ecdf<-ecdf(ReferenceDis)
 
   FPcont<-which(diff(FalsePosIDX)!=1)
   FNcont<-which(diff(FalseNegIDX)!=1)
+
   if (length(FPcont)>0){
     internalFPidx<-c(1)
     tempidx<-2
@@ -69,6 +74,20 @@ OverlapCalculator<-function(ReferenceDis,TestDis){
       fntemph<-FN_R_ecdf(dR$x[FalseNegIDX[internalFNidx[jdxh]]])
       fntempl<-FN_R_ecdf(dR$x[FalseNegIDX[internalFNidx[jdxl]]])
       FN<-FN+(fntemph-fntempl)
+    }
+  }
+
+  if ((max(TestDis)==0) | (max(ReferenceDis==0))){
+    if (max(ReferenceDis==0) & max(TestDis==0)){
+      FP<-0.5
+      FN<-0.5
+    } else if (max(TestDis==0) & any(ReferenceDis==0)){
+      FN<-FN+sum(ReferenceDis==0)/length(ReferenceDis)
+    } else if (max(ReferenceDis==0) & any(TestDis==0)){
+      FP<-FP+sum(TestDis==0)/length(TestDis)
+    } else if (max(TestDis==0) & all(ReferenceDis!=0)){
+      FP<-0
+      FN<-0
     }
   }
   Overlap<-FN+FP

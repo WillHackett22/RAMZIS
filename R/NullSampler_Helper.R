@@ -8,7 +8,7 @@
 #' @return List of dataframes of samplings
 #' @export
 #'
-#' @examples
+#' @examples #
 NULLSAMPLER_Helper<-function(coln1,coln2,sampn=200){
   #get total number of replicates
   colnt<-coln1+coln2
@@ -68,9 +68,8 @@ NULLSAMPLER_Helper<-function(coln1,coln2,sampn=200){
 #' @param minsample minimum number of samples needed from each
 #'
 #' @return
-#' @export
 #'
-#' @examples
+#' @examples #
 SAMPLER_Helper_Parity<-function(combo,coln1,coln2,minsample=2){
   # any(rowSums(combo<=coln1)<minsample) identifies
   ## i. samples from file1: <=

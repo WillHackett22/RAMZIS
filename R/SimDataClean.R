@@ -12,13 +12,16 @@
 #' @examples
 #' #From the outputs of GlycReRead example
 #' #Sample1DataMatrix<-SimDataClean('OutputSaveFile.csv')
-#' # OR
+#' ## OR
 #' #Sample1DataMatric<-SimDataClean(AbundanceDF)
 SimDataClean<-function(filename,kmin=2,rel=TRUE,normvector='None',logoption=TRUE){
   #Read in Data and measure dataframe size
   if (typeof(filename)=='character'){
     file1<-read.csv(filename,header=TRUE, row.names=1,stringsAsFactors = FALSE)
     #normalize based off of normalization vector
+    if (logoption){
+      file1<-log(file1+1)
+    }
     if (length(normvector)==ncol(file1) ){
       for (i in 1:ncol(file1)){
         file1[,i]<-as.numeric(file1[,i])*normvector[i]
@@ -34,9 +37,6 @@ SimDataClean<-function(filename,kmin=2,rel=TRUE,normvector='None',logoption=TRUE
         print("NormVector Invalid")
       }
     }
-    if (logoption){
-      file1<-log(file1+1)
-    }
     data1<-file1
     #standardize data by max abundance
     if (rel){
@@ -46,6 +46,9 @@ SimDataClean<-function(filename,kmin=2,rel=TRUE,normvector='None',logoption=TRUE
     }
   } else if(typeof(filename)=='list'){
     file1<-filename
+    if (logoption){
+      file1<-log(file1+1)
+    }
     if (length(normvector)==ncol(file1) ){
       for (i in 1:ncol(file1)){
         file1[,i]<-as.numeric(file1[,i])*normvector[i]
@@ -58,9 +61,6 @@ SimDataClean<-function(filename,kmin=2,rel=TRUE,normvector='None',logoption=TRUE
           file1[,i]<-as.numeric(file1[,i])/sum(as.numeric(file1[,i]),na.rm = T)
         }
       }
-    }
-    if (logoption){
-      file1<-log(file1+1)
     }
     data1<-file1
     if (rel){

@@ -10,12 +10,18 @@
 #' @examples #
 ContributionQualityCheckFunction<-function(SimilarityObj,InternalSimObj1,InternalSimObj2){
   TestCont<-SimilarityObj$RankInfoFinal
-  PercOut1<-ContributionQualityCheckSubFunction(InternalSimObj1$InternalRankingInfo,TestCont)
-  PercOut2<-ContributionQualityCheckSubFunction(InternalSimObj2$InternalRankingInfo,TestCont)
-  PercOut<-merge(PercOut1,PercOut2,by=0,all=T)
-  row.names(PercOut)<-PercOut[,1]
-  PercOut<-PercOut[,-1]
+  ConObj1<-ContributionQualityCheckSubFunction(InternalSimObj1$InternalRankingInfo,TestCont)
+  PercOut1<-ConObj1$Perc
+  RelOut1<-ConObj1$Rel
+  ConObj2<-ContributionQualityCheckSubFunction(InternalSimObj2$InternalRankingInfo,TestCont)
+  PercOut2<-ConObj2$Perc
+  RelOut2<-ConObj2$Rel
+  PercOut<-MatrixMerge_Helper(PercOut1,PercOut2,na.rm=F)
   colnames(PercOut)<-c("SampleGroup1","SampleGroup2")
+  RelOut<-MatrixMerge_Helper(RelOut1,RelOut2,na.rm=F)
+  colnames(RelOut)<-c("SampleGroup1","SampleGroup2")
+  TestTemp<-MatrixMerge_Helper(ConObj1$Test,ConObj2$Test)
+  TestOut<-rowMeans(TestTemp)
   PassOut<-PercOut<=0.25
-  return(list("PassIndicator"=PassOut,"PercentOverlaps"=PercOut))
+  return(list("PassIndicator"=PassOut,"PercentOverlaps"=PercOut,"RelativeDiff"=RelOut,"TestConMean"=TestOut))
 }
