@@ -2,15 +2,14 @@
 #' Generates samples of a single data set and removes duplicates
 #'
 #' @param coln Number of columns (samples) in a dataset
-#' @param cols Number of rows (glycopeptides) in a dataset
 #' @param sampn Number of samplings desired
 #' @param filename Source of dataset
 #'
-#' @return
+#' @return Matrix of indices for samples
 #' @export
 #'
-#' @examples
-SAMPLER_Helper<-function(coln,cols,sampn=100,filename=NULL){
+#' @examples #
+SAMPLER_Helper<-function(coln,sampn=100,filename=NULL){
   if (coln<6 & 2<coln){
     Nsmpl<-CombWRep(coln,coln-1)
     combo<-data.frame(matrix(1,nrow=Nsmpl,ncol=(coln)))

@@ -9,10 +9,10 @@
 #' @param MVCorrection If False, it will ignore missing values rather than count towards the overall average. Default=TRUE
 #' @param mn The scaling factor. Default will use 1+mean(presence) of a glycopeptide/identification. Setting this to a number will override that process.
 #'
-#' @return
+#' @return Similarity between two matrices
 #' @export
 #'
-#' @examples
+#' @examples #
 TestSimilarityFunction<-function(df1,combo1,gl1,df2,combo2,gl2,MVCorrection,mn=FALSE){
   #iterate through all combinations used in within of df 1
   T1_Obj<-GATHERER_Helper(gl1,combo1,df1,MVCorrection)

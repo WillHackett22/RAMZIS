@@ -9,7 +9,7 @@
 #'
 #' @return TIDY formatted contribution data
 #'
-#' @examples
+#' @examples #
 TidyContributions<-function(SimObject,Boot1,Boot2,GPID=NULL,CompID='X_',IntBool=T){
   Temp<-SimObject$Contribution
   Tcs<-dim(Temp)[2]

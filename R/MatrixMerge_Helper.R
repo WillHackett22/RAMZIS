@@ -6,7 +6,7 @@
 #'
 #' @return A matrix combined by row names
 #'
-#' @examples
+#' @examples #
 MatrixMerge_Helper<-function(m1,m2,na.rm=T){
   out<-merge(m1,m2,by=0,all=TRUE)
   row.names(out)<-out[,1]

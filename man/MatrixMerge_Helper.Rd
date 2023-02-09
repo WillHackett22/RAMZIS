@@ -4,12 +4,14 @@
 \alias{MatrixMerge_Helper}
 \title{MatrixMerge_Helper}
 \usage{
-MatrixMerge_Helper(m1, m2)
+MatrixMerge_Helper(m1, m2, na.rm = T)
 }
 \arguments{
 \item{m1}{Matrix 1}
 
 \item{m2}{Matrix 2}
+
+\item{na.rm}{Default=T turns NA into 0}
 }
 \value{
 A matrix combined by row names

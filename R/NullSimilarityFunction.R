@@ -9,7 +9,7 @@
 #' @return Distribution of Null similarities and their contributions
 #' @export
 #'
-#' @examples
+#' @examples #
 NullSimilarityFunction<-function(df1,df2,ncombos,MVCorrection,mn){
   gl1<-c(row.names(df1))
   gl2<-c(row.names(df2))

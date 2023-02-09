@@ -16,7 +16,7 @@
 #' @param logopt Default=FALSE
 #' @param normvec Default=c('None','None')
 #'
-#' @return #
+#' @return Automated RAMZIS Output Currently underdevelopment
 #' @export
 #'
 #' @examples #

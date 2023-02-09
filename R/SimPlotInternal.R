@@ -7,10 +7,10 @@
 #' @param Confidence From InternalConfidenceScore()
 #' @param legend.bool Boolean to produce legend or not
 #'
-#' @return
+#' @return Internal Similarity Plot
 #' @export
 #'
-#' @examples
+#' @examples #
 SimPlotInternal<-function(PlotTitle,dfSim,Dataset,OverlapData,Confidence=NULL,legend.bool=T){
   if (Dataset==1){
     Refname<-'Internal1'

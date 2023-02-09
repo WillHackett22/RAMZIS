@@ -32,6 +32,6 @@ SimDataClean Standardize and normalize an abundance matrix
 \examples{
 #From the outputs of GlycReRead example
 #Sample1DataMatrix<-SimDataClean('OutputSaveFile.csv')
-# OR
+## OR
 #Sample1DataMatric<-SimDataClean(AbundanceDF)
 }

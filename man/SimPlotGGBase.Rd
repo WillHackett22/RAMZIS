@@ -9,6 +9,7 @@ SimPlotGGBase(
   dfSim,
   RefName,
   OverlapData,
+  ObservedSimObj,
   Confidence = NULL,
   legend.bool = T,
   themepick = theme_RAMZIS
@@ -22,6 +23,8 @@ SimPlotGGBase(
 \item{RefName}{Reference Distribution Name. ("Null","Internal1","Internal2","All")}
 
 \item{OverlapData}{Overlap data from OverlapCalculator}
+
+\item{ObservedSimObj}{List produced by ObservedSimilarityStats()}
 
 \item{Confidence}{Internal Confidence Score. Do not touch if doing TestNull Plot. DEFAULT=NULL}
 

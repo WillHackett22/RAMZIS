@@ -4,7 +4,7 @@
 \alias{OverlapCalculator}
 \title{Overlap Calculator}
 \usage{
-OverlapCalculator(ReferenceDis, TestDis)
+OverlapCalculator(ReferenceDis, TestDis, zerohandling = F)
 }
 \arguments{
 \item{ReferenceDis}{reference distribution, generally higher}

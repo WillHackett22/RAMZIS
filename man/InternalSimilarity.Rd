@@ -12,7 +12,7 @@ InternalSimilarity(
   MVCorrection = TRUE,
   mn = FALSE,
   logopt = TRUE,
-  normvec = c("None")
+  normvec = list("None")
 )
 }
 \arguments{
@@ -30,7 +30,7 @@ InternalSimilarity(
 
 \item{logopt}{Boolean indicating the use of the log transform before relative scaling of abundance. Default=TRUE}
 
-\item{normvec}{Optional: the normalization vectors to adjust signal abundance between samples. Default=c('None')}
+\item{normvec}{Optional: the normalization vectors to adjust signal abundance between samples. Default=list('None')}
 }
 \value{
 Internal Similarity Object

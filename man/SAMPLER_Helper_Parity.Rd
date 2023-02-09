@@ -21,3 +21,6 @@ SAMPLER_Helper_Parity(combo, coln1, coln2, minsample = 2)
 \description{
 Sampler_Helper_Parity is used by Null Sampler Helper function to ensure that the datasets are represented equally
 }
+\examples{
+#
+}

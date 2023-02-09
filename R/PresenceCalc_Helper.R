@@ -6,7 +6,7 @@
 #' @return The presence of each glycopeptide in a dataset
 #' @export
 #'
-#' @examples
+#' @examples #
 PresenceCalc_Helper<-function(gl,df){
   out<-data.frame(apply(df,1,PresenceCalcBase))
   return(out)
@@ -14,11 +14,11 @@ PresenceCalc_Helper<-function(gl,df){
 
 #' PresenceCalcBase finds the presence of a single vector
 #'
-#' @param vec
+#' @param vec a vector of numeric values
 #'
-#' @return
+#' @return Presence of a vector
 #'
-#' @examples
+#' @examples #
 PresenceCalcBase<-function(vec){
   if (any(is.na(vec))){
     vec[is.na(vec)]<-0

@@ -4,12 +4,13 @@
 #' @param df1 The first dataframe to be compared
 #' @param df2 The second dataframe to be compared
 #' @param mn The scaling factor. Default will use 1+mean(presence) of a glycopeptide/identification. Setting this to a number will override that process.
+#' @param MVCorrection Replaces NA with 0. Default=TRUE
 #'
-#' @return
+#' @return Similarity of two sample datasets
 #' @export
 #'
-#' @examples
-SimilarityCalculation_Singular<-function(df1,df2,mn=FALSE){
+#' @examples #
+SimilarityCalculation_Singular<-function(df1,df2,MVCorrection=TRUE,mn=FALSE){
   gl1<-row.names(df1)
   gl2<-row.names(df2)
   T1_a<-rowMeans(df1,na.rm =TRUE)
@@ -18,8 +19,8 @@ SimilarityCalculation_Singular<-function(df1,df2,mn=FALSE){
   T01a<-sum((rowMeans(df2,na.rm =TRUE))^2)
   presence1<-PresenceCalc_Helper(gl1,df1)
   presence2<-PresenceCalc_Helper(gl2,df2)
-  presenceA<-MatrixMerge_Helper(presence1,presence2)
-  THA<-MatrixMerge_Helper(T1_a,T_1a)
+  presenceA<-MatrixMerge_Helper(presence1,presence2,na.rm=MVCorrection)
+  THA<-MatrixMerge_Helper(T1_a,T_1a,na.rm=MVCorrection)
   TRef<-row.names(THA)
   lT<-length(TRef)
   if (mn==FALSE){
