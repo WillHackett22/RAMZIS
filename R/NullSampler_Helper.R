@@ -40,19 +40,21 @@ NULLSAMPLER_Helper<-function(coln1,coln2,sampn=200){
   } else {
     minsample<-1
   }
-  combot1<-SAMPLER_Helper_Parity(combot1,coln1,coln2,minsample)
-  combot2<-SAMPLER_Helper_Parity(combot2,coln1,coln2,minsample)
-
   #check no overlap between null distributions
   if (coln1==coln2){
     combot<-rbind(combot1,combot2,all=T,fill=T)
     if (sum(duplicated(combot))>0){
       combot<-combot[-which(duplicated(combot)),]
     }
-    combot1<-combot[1:floor(dim(combot)[1]/2),]
-    combot2<-combot[(floor(dim(combot)[1]/2)+1):(dim(combot)[1]-1),]
+    combot<-SAMPLER_Helper_Parity(combot,coln1,coln2,minsample)
+    si<-sample(dim(combot)[1],floor(dim(combot)[1]/2))
+    combot1<-combot[si,]
+    combot2<-combot[-si,]
     row.names(combot2)<-NULL
     row.names(combot1)<-NULL
+  } else {
+    combot1<-SAMPLER_Helper_Parity(combot1,coln1,coln2,minsample)
+    combot2<-SAMPLER_Helper_Parity(combot2,coln1,coln2,minsample)
   }
   null_samples<-c()
   null_samples$NDis1<-combot1
@@ -68,6 +70,7 @@ NULLSAMPLER_Helper<-function(coln1,coln2,sampn=200){
 #' @param minsample minimum number of samples needed from each
 #'
 #' @return
+#' @export
 #'
 #' @examples #
 SAMPLER_Helper_Parity<-function(combo,coln1,coln2,minsample=2){
