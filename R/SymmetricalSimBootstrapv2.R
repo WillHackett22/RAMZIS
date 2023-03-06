@@ -1,7 +1,23 @@
-SymmetricalSimBootstrapV2<-function(filename1,filename2,kmin=2,rel=TRUE,MVCorrection=TRUE,mn=FALSE,logopt=TRUE,normvec=list('None','None')){
+#' SymmetricalSimBootstrapV2 compares two datasets of glycopeptide identifications. It is a temporary updated version
+#'
+#' @param filename1 first sample dataset
+#' @param filename2 second sample dataset
+#' @param kmin minimum number of observations Default=2
+#' @param rel Boolean designating standardization method. Default='Joint'
+#' @param MVCorrection Boolean missing value correction, if disabled it turns 0s to NAs. Default=TRUE
+#' @param mn Default=FALSE. In default settings it adjusts the distance scaling by average presence. Setting it to a numeric value will use that as a constant instead. (Recommended 1:2)
+#' @param logopt Boolean indicating the use of the log transform before relative scaling of abundance. Default=TRUE
+#' @param normvec Optional: the normalization vectors to adjust signal abundance between samples. Default=list('None','None')
+#'
+#' @return Similarity Object
+#' @export
+#'
+#' @examples #
+SymmetricalSimBootstrapV2<-function(filename1,filename2,kmin=2,rel='Joint',MVCorrection=TRUE,mn=FALSE,logopt=TRUE,normvec=list('None','None')){
   #load data and acquire glycopeptides
-  file1<-SimDataClean(filename1,kmin,rel,normvector = normvec[[1]],logoption = logopt)
-  file2<-SimDataClean(filename2,kmin,rel,normvector = normvec[[2]],logoption = logopt)
+  datalist<-SimDataCleanJoint(filename1,filename2,kmin,rel,normvector = normvec,logoption = logopt)
+  file1<-datalist$DF1
+  file2<-datalist$DF2
   gl1<-c(row.names(file1))
   gl2<-c(row.names(file2))
   gj<-unique(c(gl1,gl2))

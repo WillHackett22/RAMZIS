@@ -13,7 +13,7 @@
 #' @export
 #'
 #' @examples #
-InternalSimilarity<-function(filename,BootSet,kmin=1,rel=TRUE,MVCorrection=TRUE,mn=FALSE,logopt=TRUE,normvec=list('None')){
+InternalSimilarity<-function(filename,BootSet,kmin=1,rel="Within",MVCorrection=TRUE,mn=FALSE,logopt=TRUE,normvec=list('None')){
   file1<-SimDataClean(filename,kmin,rel,normvector = unlist(normvec),logoption=logopt)
   glycopep1<-c(row.names(file1))
   glycojoint<-glycopep1

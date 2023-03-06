@@ -46,13 +46,18 @@ GlycReRead<-function(Filelist,Outfilename=NULL,verbose=T){
     }
     key<-paste(GFile$protein_name,'::',GFile$glycopeptide)
     abun<-GFile$total_signal
+    while (any(duplicated(key))){
+      kix<-which(duplicated(key))[1]
+      gix<-which(key[kix]==key)[1]
+      abun[gix]<-abun[gix]+abun[kix]
+      key<-key[-kix]
+      abun<-abun[-kix]
+    }
     tempg<-data.frame(matrix(nrow=length(key),ncol=1))
     row.names(tempg)<-key
     colnames(tempg)<-FNameB
     tempg[,FNameB]<-abun
-    tempdata<-merge(tempdata,tempg,by=0,all = TRUE)
-    row.names(tempdata)<-tempdata[,1]
-    tempdata<-tempdata[,-1]
+    tempdata<-MatrixMerge_Helper(tempdata,tempg)
   }
   glyprot<-row.names(tempdata)
   prot<-vapply(strsplit(glyprot,'::'), `[`, 1, FUN.VALUE=character(1))

@@ -22,7 +22,7 @@ SAMPLER_Helper<-function(coln,sampn=100,filename=NULL){
   } else {
     combo<-data.frame(matrix(1,nrow=sampn,ncol=(coln)))
     for (j in 1:100){
-      combo[j,]<-sort(sample(coln1,(coln),replace = TRUE))
+      combo[j,]<-sort(sample(coln,(coln),replace = TRUE))
     }
     if (sum(duplicated(combo))>0){
       combo<-combo[-which(duplicated(combo)),]

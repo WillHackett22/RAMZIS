@@ -5,6 +5,7 @@
 #' @param na.rm Default=T turns NA into 0
 #'
 #' @return A matrix combined by row names
+#' @export
 #'
 #' @examples #
 MatrixMerge_Helper<-function(m1,m2,na.rm=T){

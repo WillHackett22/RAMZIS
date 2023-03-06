@@ -8,10 +8,14 @@
 #' @examples #
 OverlapIdxs<-function(OverlapData,AlpBet){
   fi<-c()
-  for (j in 1:(length(OverlapData[[AlpBet]])/2)){
-    jdxh<-j*2
-    jdxl<-(j-1)*2+1
-    fi<-c(fi,seq(OverlapData[[AlpBet]][jdxl],OverlapData[[AlpBet]][jdxh]))
+  if (length(OverlapData[[AlpBet]])>1){
+    for (j in 1:(length(OverlapData[[AlpBet]])/2)){
+      jdxh<-j*2
+      jdxl<-(j-1)*2+1
+      fi<-c(fi,seq(OverlapData[[AlpBet]][jdxl],OverlapData[[AlpBet]][jdxh]))
+    }
+  } else {
+    fi<-NA
   }
   return(fi)
 }

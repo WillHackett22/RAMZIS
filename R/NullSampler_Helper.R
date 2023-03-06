@@ -4,14 +4,21 @@
 #' @param coln1 number of columns (samples) in first dataset
 #' @param coln2 number of columns (samples) in second dataset
 #' @param sampn initial number of samplings to begin with. Default=200
+#' @param parity Makes it so samples chosen with equal probability to each dataset, rather than by equal weight to all samples regardless of dataset size. Default=T
 #'
 #' @return List of dataframes of samplings
 #' @export
 #'
 #' @examples #
-NULLSAMPLER_Helper<-function(coln1,coln2,sampn=200){
+NULLSAMPLER_Helper<-function(coln1,coln2,sampn=200,parity=T){
   #get total number of replicates
   colnt<-coln1+coln2
+  #remove all with less than 2 of each side
+  if (coln1>3 & coln2>3){
+    minsample<-2
+  } else {
+    minsample<-1
+  }
   #check size of replicates
   if (colnt<=6){
     combot1<-data.frame(gtools::combinations(colnt,coln1,repeats.allowed = TRUE))
@@ -19,9 +26,16 @@ NULLSAMPLER_Helper<-function(coln1,coln2,sampn=200){
   } else {
     combot1<-data.frame(matrix(1,nrow=sampn,ncol=coln1))
     combot2<-data.frame(matrix(1,nrow=sampn,ncol=coln2))
+    if (parity==T){
+      prob1a<-rep(1/coln1,coln1)
+      prob1b<-rep(1/coln2,coln2)
+      probt<-c(prob1a,prob1b)/2
+    } else {
+      probt<-rep(1/colnt,colnt)
+    }
     for (j in 1:sampn){
-      combot1[j,]<-sort(sample(colnt,coln1,replace = TRUE))
-      combot2[j,]<-sort(sample(colnt,coln2,replace = TRUE))
+      combot1[j,]<-sort(sample(colnt,coln1,replace = TRUE,prob=probt))
+      combot2[j,]<-sort(sample(colnt,coln2,replace = TRUE,prob=probt))
     }
     #remove duplicates
     if (sum(duplicated(combot1))>0){
@@ -34,12 +48,6 @@ NULLSAMPLER_Helper<-function(coln1,coln2,sampn=200){
   row.names(combot2)<-NULL
   row.names(combot1)<-NULL
 
-  #remove all with less than 2 of each side
-  if (coln1>3 & coln2>3){
-    minsample<-2
-  } else {
-    minsample<-1
-  }
   #check no overlap between null distributions
   if (coln1==coln2){
     combot<-rbind(combot1,combot2,all=T,fill=T)
