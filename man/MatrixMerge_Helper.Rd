@@ -19,3 +19,6 @@ A matrix combined by row names
 \description{
 MatrixMerge_Helper
 }
+\examples{
+#
+}

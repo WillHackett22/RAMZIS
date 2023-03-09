@@ -5,19 +5,24 @@
 \title{SimilarityCalculation_Singular
 For calculating two datasets similarity without sampling. It is used in RAMZIS_Main to calculate the observed similarity}
 \usage{
-SimilarityCalculation_Singular(df1, df2, mn = FALSE)
+SimilarityCalculation_Singular(df1, df2, MVCorrection = TRUE, mn = FALSE)
 }
 \arguments{
 \item{df1}{The first dataframe to be compared}
 
 \item{df2}{The second dataframe to be compared}
 
+\item{MVCorrection}{Replaces NA with 0. Default=TRUE}
+
 \item{mn}{The scaling factor. Default will use 1+mean(presence) of a glycopeptide/identification. Setting this to a number will override that process.}
 }
 \value{
-
+Similarity of two sample datasets
 }
 \description{
 SimilarityCalculation_Singular
 For calculating two datasets similarity without sampling. It is used in RAMZIS_Main to calculate the observed similarity
+}
+\examples{
+#
 }

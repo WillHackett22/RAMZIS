@@ -27,8 +27,11 @@ SimPlotInternal(
 \item{legend.bool}{Boolean to produce legend or not}
 }
 \value{
-
+Internal Similarity Plot
 }
 \description{
 SimPlotInternal produces a similarity plot of one of the two internal distributions
+}
+\examples{
+#
 }

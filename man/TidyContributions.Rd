@@ -32,3 +32,6 @@ TIDY formatted contribution data
 \description{
 TidyContributions reformats the similarity contribution data into TIDY friendly format
 }
+\examples{
+#
+}

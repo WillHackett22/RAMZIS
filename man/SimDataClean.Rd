@@ -7,7 +7,7 @@
 SimDataClean(
   filename,
   kmin = 2,
-  rel = TRUE,
+  rel = "Within",
   normvector = "None",
   logoption = TRUE
 )
@@ -17,7 +17,7 @@ SimDataClean(
 
 \item{kmin}{The minimum number of observations needed for a glycopeptide to be real. Default=2}
 
-\item{rel}{Pick if values should be normalized relative to the max total abundance of any column(TRUE) or read as is(FALSE). Default = TRUE}
+\item{rel}{Pick if values should be normalized relative to the max total abundance of any column('Within'), to a given value (NUMERIC), or read as is('AsIs'). Recommended numeric is the max of both columns for a given value. Default = 'Within'}
 
 \item{normvector}{A vector for normalizing signal between samples, usually based on the XIC. Default: 'None' reads values as is; 'Relative' scales samples to their overall signal (assuming equal signal distribution). Providing a vector multiplies sample glycopeptides by that vector}
 

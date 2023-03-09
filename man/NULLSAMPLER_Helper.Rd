@@ -5,7 +5,7 @@
 \title{NullSampler_Helper
 Generates samples from two datasets to create null datasets and then removes duplicates.}
 \usage{
-NULLSAMPLER_Helper(coln1, coln2, sampn = 200)
+NULLSAMPLER_Helper(coln1, coln2, sampn = 200, parity = T)
 }
 \arguments{
 \item{coln1}{number of columns (samples) in first dataset}
@@ -13,6 +13,8 @@ NULLSAMPLER_Helper(coln1, coln2, sampn = 200)
 \item{coln2}{number of columns (samples) in second dataset}
 
 \item{sampn}{initial number of samplings to begin with. Default=200}
+
+\item{parity}{Makes it so samples chosen with equal probability to each dataset, rather than by equal weight to all samples regardless of dataset size. Default=T}
 }
 \value{
 List of dataframes of samplings

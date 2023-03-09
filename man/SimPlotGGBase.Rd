@@ -9,10 +9,11 @@ SimPlotGGBase(
   dfSim,
   RefName,
   OverlapData,
-  ObservedSimObj,
+  ObservedSimObj = NULL,
   Confidence = NULL,
   legend.bool = T,
-  themepick = theme_RAMZIS
+  themepick = theme_RAMZIS,
+  zopt = T
 )
 }
 \arguments{
@@ -24,13 +25,15 @@ SimPlotGGBase(
 
 \item{OverlapData}{Overlap data from OverlapCalculator}
 
-\item{ObservedSimObj}{List produced by ObservedSimilarityStats()}
+\item{ObservedSimObj}{List produced by ObservedSimilarityStats() Default=NULL}
 
 \item{Confidence}{Internal Confidence Score. Do not touch if doing TestNull Plot. DEFAULT=NULL}
 
 \item{legend.bool}{Boolean indicating whether or not to produce the legend. Default=T}
 
 \item{themepick}{Default=theme_RAMZIS. Theme object from ggplot2 for formatting.}
+
+\item{zopt}{Indicates use of Z-score for simulation validity over percentile. Default=T}
 }
 \value{
 A similarity plot using ggplot2

@@ -8,7 +8,7 @@ Get all the information for similarity comparisons}
 GATHERER_Helper(gl, combo, df, MVCorrection)
 }
 \arguments{
-\item{gl}{Glycopeptide List}
+\item{gl}{Glycopeptide List Deprecated}
 
 \item{combo}{Sampling}
 
@@ -17,9 +17,12 @@ GATHERER_Helper(gl, combo, df, MVCorrection)
 \item{MVCorrection}{If False, it will ignore missing values rather than count towards the overall average. Default=TRUE}
 }
 \value{
-
+Gets data for use in matrix similarity comparison
 }
 \description{
 GATHERER_Helper
 Get all the information for similarity comparisons
+}
+\examples{
+#
 }

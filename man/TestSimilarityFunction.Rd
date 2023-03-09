@@ -33,8 +33,11 @@ TestSimilarityFunction(
 \item{mn}{The scaling factor. Default will use 1+mean(presence) of a glycopeptide/identification. Setting this to a number will override that process.}
 }
 \value{
-
+Similarity between two matrices
 }
 \description{
 TestSimilarityFunction
+}
+\examples{
+#
 }

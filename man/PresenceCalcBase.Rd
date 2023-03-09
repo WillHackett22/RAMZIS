@@ -7,11 +7,14 @@
 PresenceCalcBase(vec)
 }
 \arguments{
-\item{vec}{}
+\item{vec}{a vector of numeric values}
 }
 \value{
-
+Presence of a vector
 }
 \description{
 PresenceCalcBase finds the presence of a single vector
+}
+\examples{
+#
 }

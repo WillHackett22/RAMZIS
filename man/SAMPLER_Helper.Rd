@@ -5,21 +5,22 @@
 \title{SAMPLER_Helper
 Generates samples of a single data set and removes duplicates}
 \usage{
-SAMPLER_Helper(coln, cols, sampn = 100, filename = NULL)
+SAMPLER_Helper(coln, sampn = 100, filename = NULL)
 }
 \arguments{
 \item{coln}{Number of columns (samples) in a dataset}
-
-\item{cols}{Number of rows (glycopeptides) in a dataset}
 
 \item{sampn}{Number of samplings desired}
 
 \item{filename}{Source of dataset}
 }
 \value{
-
+Matrix of indices for samples
 }
 \description{
 SAMPLER_Helper
 Generates samples of a single data set and removes duplicates
+}
+\examples{
+#
 }

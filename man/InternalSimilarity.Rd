@@ -8,7 +8,7 @@ InternalSimilarity(
   filename,
   BootSet,
   kmin = 1,
-  rel = TRUE,
+  rel = "Within",
   MVCorrection = TRUE,
   mn = FALSE,
   logopt = TRUE,

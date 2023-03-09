@@ -54,7 +54,7 @@ RAMZISMain(
 \item{normvec}{Default=c('None','None')}
 }
 \value{
-
+Automated RAMZIS Output Currently underdevelopment
 }
 \description{
 RAMZISMain is intended to be the hassle free way to run RAMZIS. It should produce all the similarity comparisons necessary for a given set of files

@@ -23,3 +23,6 @@ Distribution of Null similarities and their contributions
 \description{
 NullSimilarityFunction
 }
+\examples{
+#
+}
