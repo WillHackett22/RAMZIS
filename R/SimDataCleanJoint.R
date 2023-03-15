@@ -6,12 +6,13 @@
 #' @param rel Choice of Standardization method. 'Within' scales compared to largest signal size in each sample. 'Joint' scales to largest signal value between both files. 'AsIs' does no scaling. NUMERIC scales to a specified number. Default='Joint'
 #' @param normvector List of Normalization vectors to be multiplied against. Vector length should equal sample size. Default=list('None','None')
 #' @param logoption Boolean indicating use of log transformation. Default=TRUE
+#' @param kmin_sub Minimum number of identifications needed to be seen in a given file. Default=list(1,1)
 #'
 #' @return Normalized and standardized cleaned data
 #' @export
 #'
 #' @examples #
-SimDataCleanJoint<-function(filename1,filename2,kmin=2,rel='Joint',normvector=list('None','None'),logoption=TRUE){
+SimDataCleanJoint<-function(filename1,filename2,kmin=2,rel='Joint',normvector=list('None','None'),logoption=TRUE,kmin_sub=list(1,1)){
   if (typeof(filename1)=='character'){
     file1<-read.csv(filename1,header=TRUE, row.names=1,stringsAsFactors = FALSE)
   } else if (typeof(filename1)=='list'){
@@ -28,8 +29,20 @@ SimDataCleanJoint<-function(filename1,filename2,kmin=2,rel='Joint',normvector=li
   if (rel=='Joint'){
     rel<-max(colSums(dj,na.rm=T))
   }
-  data1<-SimDataClean(filename1,kmin,rel,normvector[[1]],logoption)
-  data2<-SimDataClean(filename2,kmin,rel,normvector[[2]],logoption)
+  coln1<-dim(d1temp)[2]
+  coln2<-dim(d2temp)[2]
+  filet<-MatrixMerge_Helper(file1,file2)
+  coln<-dim(filet)[2] #samples
+  mvhold<-apply(filet,1,MVCount)
+  remhold<-coln-mvhold
+  #remove data where less than kmin (default=2) are seen
+  if (any(remhold<kmin)){
+    filet<-filet[-which(remhold<kmin),]
+  }
+  file1<-filet[,1:coln1]
+  file2<-filet[,(coln1+1):coln]
+  data1<-SimDataClean(file1,kmin=kmin_sub[[1]],rel,normvector[[1]],logoption)
+  data2<-SimDataClean(file2,kmin=kmin_sub[[2]],rel,normvector[[2]],logoption)
   dataout<-list("DF1"=data1,"DF2"=data2)
   return(dataout)
 }
