@@ -59,6 +59,6 @@ SymmetricalSimBootstrapV2<-function(filename1,filename2,kmin=2,rel='Joint',MVCor
   ncombns<-length(tanN)
   NullOut<-data.frame(matrix(tanN,nrow=ncombns,ncol = 1))
   colnames(NullOut)<-c('NullTani')
-  FinalOut<-list("Summary"=TaniOut,"UnadjustedRankInfo"=tanmathold,"NullRankInfoFinal"=tanmatholdNW,"NullOut"=NullOut,'RankInfoFinal'=tanmatholdW,"RankInfoActual"=tanmatAFinal,"Actual"=taniActualF,"Boot"=list(combo1,combo2,comboN$NDis1,comboN$NDis2))
+  FinalOut<-list("Summary"=TaniOut,"RankInfo"=tanmathold,"NullRankInfo"=tanmatholdN,"NullOut"=NullOut,'WeightedContributions'=list(tanmatholdW,tanmatholdNW),"RankInfoActual"=tanmatAFinal,"Actual"=taniActualF,"Boot"=list(combo1,combo2,comboN$NDis1,comboN$NDis2))
   return(FinalOut)
 }

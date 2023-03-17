@@ -6,13 +6,13 @@
 #' @param rel Choice of Standardization method. 'Within' scales compared to largest signal size in each sample. 'Joint' scales to largest signal value between both files. 'AsIs' does no scaling. NUMERIC scales to a specified number. Default='Joint'
 #' @param normvector List of Normalization vectors to be multiplied against. Vector length should equal sample size. Default=list('None','None')
 #' @param logoption Boolean indicating use of log transformation. Default=TRUE
-#' @param kmin_sub Minimum number of identifications needed to be seen in a given file. Default=list(1,1)
+#' @param kmin_sub Minimum number of identifications needed to be seen in a given file. Default=list(0,0)
 #'
 #' @return Normalized and standardized cleaned data
 #' @export
 #'
 #' @examples #
-SimDataCleanJoint<-function(filename1,filename2,kmin=2,rel='Joint',normvector=list('None','None'),logoption=TRUE,kmin_sub=list(1,1)){
+SimDataCleanJoint<-function(filename1,filename2,kmin=2,rel='Joint',normvector=list('None','None'),logoption=TRUE,kmin_sub=list(0,0)){
   if (typeof(filename1)=='character'){
     file1<-read.csv(filename1,header=TRUE, row.names=1,stringsAsFactors = FALSE)
   } else if (typeof(filename1)=='list'){

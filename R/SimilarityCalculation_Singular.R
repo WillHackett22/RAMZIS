@@ -46,6 +46,6 @@ SimilarityCalculation_Singular<-function(df1,df2,MVCorrection=TRUE,mn=FALSE){
     tanmatAFinal[1,TRef[m]]<-unlist(T11A[TRef[m],]/(T10a+T01a-sum(T11A,na.rm=T)))
   }
   taniActualF<-sum(tanmatAFinal)
-  out<-list("Similarity"=taniActualF,"Contribution"=tanmatAFinal)
+  out<-list("Similarity"=taniActualF,"Contribution"=tanmatA)
   return(out)
 }

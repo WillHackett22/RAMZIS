@@ -15,7 +15,7 @@
 #' #Sample1DataMatrix<-SimDataClean('OutputSaveFile.csv')
 #' ## OR
 #' #Sample1DataMatric<-SimDataClean(AbundanceDF)
-SimDataClean<-function(filename,kmin=2,rel='Within',normvector='None',logoption=TRUE,rel_force=FALSE){
+SimDataClean<-function(filename,kmin=2,rel='Within',normvector='None',logoption=TRUE,rel_force=FALSE,sigthresh=TRUE){
   #Read in Data and measure dataframe size
   if (typeof(filename)=='character'){
     file1<-read.csv(filename,header=TRUE, row.names=1,stringsAsFactors = FALSE)
@@ -35,14 +35,16 @@ SimDataClean<-function(filename,kmin=2,rel='Within',normvector='None',logoption=
     data1<-data1[-which(remhold<kmin),]
   }
   #standardize data by max abundance
-  if (normvector!="None" & rel_force==FALSE){
+  if (any(normvector!="None") & rel_force==FALSE){
     rel<-"AsIs"
   }
   data1<-Standardization_SubFunction(data1,rel)
   data1[is.na(data1)]<-0
   #remove data where mean is lower than logx=-10
-  if (sum(-10>log(apply(data1,1,mean)))>0){
-    data1<-data1[-which(-10>log(apply(data1,1,mean))),]
+  if (sigthresh){
+    if (any(-10>log(apply(data1,1,mean)))){
+      data1<-data1[-which(-10>log(apply(data1,1,mean))),]
+    }
   }
   return(data1)
 }
