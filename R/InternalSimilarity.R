@@ -8,13 +8,14 @@
 #' @param mn Default=FALSE. In default settings it adjusts the distance scaling by average presence. Setting it to a numeric value will use that as a constant instead. (Recommended 1:2)
 #' @param logopt Boolean indicating the use of the log transform before relative scaling of abundance. Default=TRUE
 #' @param normvec Optional: the normalization vectors to adjust signal abundance between samples. Default=list('None')
+#' @param rel_force Default=FALSE
 #'
 #' @return Internal Similarity Object
 #' @export
 #'
 #' @examples #
-InternalSimilarity<-function(filename,BootSet,kmin=1,rel="Within",MVCorrection=TRUE,mn=FALSE,logopt=TRUE,normvec=list('None')){
-  file1<-SimDataClean(filename,kmin,rel,normvector = unlist(normvec),logoption=logopt)
+InternalSimilarity<-function(filename,BootSet,kmin=1,rel="Within",MVCorrection=TRUE,mn=FALSE,logopt=TRUE,normvec=list('None'),rel_force=FALSE){
+  file1<-SimDataClean(filename,kmin,rel,normvector = unlist(normvec),logoption=logopt,rel_force = rel_force)
   glycopep1<-c(row.names(file1))
   glycojoint<-glycopep1
   glycopep2<-glycopep1
@@ -63,23 +64,15 @@ InternalSimilarity<-function(filename,BootSet,kmin=1,rel="Within",MVCorrection=T
   T01<-T10
   PHold2<-PHold1
 
-  T__Hold<-merge(T1_,T_1,by=0,all=TRUE)
-  row.names(T__Hold)<-T__Hold[,1]
-  TRef<-row.names(T__Hold)
-  T__Hold<-T__Hold[,-1]
-  T__Hold[is.na(T__Hold)]<-0
-  PHold<-merge(PHold1,PHold2,by=0,all=TRUE)
-  row.names(PHold)<-PHold[,1]
-  PHold<-PHold[,-1]
-  PHold[is.na(PHold)]<-0
+  T__Hold<-MatrixMerge_Helper(T1_,T_1)
+  PHold<-MatrixMerge_Helper(PHold1,PHold2)
   #Bring T11 related terms together
   ncomb1<-nrow(combo1)
   ncombt<-2*ncomb1
   ncombs<-ncomb1*(ncomb1-1)/2
   #prevent duplicate comparisons
-  tracker1<-0
-  ncomb2<-ncomb1-1
   TempSimObject<-SimilarityCalculation(T__Hold,T10,T01,PHold,ncomb1,ncomb1,mn)
+  tanmathold<-TempSimObject$Numerator
   tanmatholdW<-TempSimObject$Contribution
   tan1<-TempSimObject$Similarity
   keepidx<-c()
@@ -92,6 +85,6 @@ InternalSimilarity<-function(filename,BootSet,kmin=1,rel="Within",MVCorrection=T
   tan1<-tan1[keepidx]
 
 
-  OutputObj<-list("InternalTanimoto"=tan1,"InternalRankingInfo"=tanmatholdW)
+  OutputObj<-list("InternalSimilarity"=tan1,"InternalRankingInfo"=tanmathold,"WeightedContributions"=tanmatholdW)
   return(OutputObj)
 }

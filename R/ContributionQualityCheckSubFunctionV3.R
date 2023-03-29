@@ -6,7 +6,7 @@
 #' @return QC results
 #'
 #' @examples #
-ContributionQualityCheckSubFunction<-function(ReferenceCont,TestCont){
+ContributionQualityCheckSubFunctionV3<-function(ReferenceCont,TestCont){
   rl<-dim(TestCont)[2]
   il<-dim(ReferenceCont)[2]
   tempcont<-MatrixMerge_Helper(TestCont,ReferenceCont,na.rm=F)

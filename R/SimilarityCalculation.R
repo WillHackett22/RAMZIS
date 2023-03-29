@@ -34,5 +34,5 @@ SimilarityCalculation<-function(ABMatrix,AATerm,BBTerm,PresenceMatrix,AMatSize,B
   }
   tanmatholdW<-t(t(T11)/(Denominator-colSums(T11,na.rm=T)))
   tan1<-colSums(tanmatholdW,na.rm=T)
-  Outlist<-list("Numerator"=tanmathold,"Contribution"=tanmatholdW,"Similarity"=tan1)
+  Outlist<-list("Numerator"=T11,"WeightedContributions"=tanmatholdW,"Similarity"=tan1)
 }

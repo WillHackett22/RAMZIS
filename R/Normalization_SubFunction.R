@@ -17,7 +17,7 @@ Normalization_SubFunction<-function(df,normvector='None',logoption=TRUE){
       df[,i]<-as.numeric(df[,i])*normvector[i]
     }
   } else {
-    if (normvector=='None'){
+    if (any(normvector=='None')){
       dfout<-df
     } else if (normvector=='Relative'){
       for (i in 1:ncol(df)){

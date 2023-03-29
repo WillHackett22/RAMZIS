@@ -10,7 +10,8 @@ SimDataCleanJoint(
   kmin = 2,
   rel = "Joint",
   normvector = list("None", "None"),
-  logoption = TRUE
+  logoption = TRUE,
+  kmin_sub = list(0, 0)
 )
 }
 \arguments{
@@ -25,6 +26,8 @@ SimDataCleanJoint(
 \item{normvector}{List of Normalization vectors to be multiplied against. Vector length should equal sample size. Default=list('None','None')}
 
 \item{logoption}{Boolean indicating use of log transformation. Default=TRUE}
+
+\item{kmin_sub}{Minimum number of identifications needed to be seen in a given file. Default=list(0,0)}
 }
 \value{
 Normalized and standardized cleaned data

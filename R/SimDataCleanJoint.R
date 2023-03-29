@@ -7,12 +7,13 @@
 #' @param normvector List of Normalization vectors to be multiplied against. Vector length should equal sample size. Default=list('None','None')
 #' @param logoption Boolean indicating use of log transformation. Default=TRUE
 #' @param kmin_sub Minimum number of identifications needed to be seen in a given file. Default=list(0,0)
+#' @param rel_force Forces relativization even if normalization vector is given. Default=F
 #'
 #' @return Normalized and standardized cleaned data
 #' @export
 #'
 #' @examples #
-SimDataCleanJoint<-function(filename1,filename2,kmin=2,rel='Joint',normvector=list('None','None'),logoption=TRUE,kmin_sub=list(0,0)){
+SimDataCleanJoint<-function(filename1,filename2,kmin=2,rel='Joint',normvector=list('None','None'),logoption=TRUE,kmin_sub=list(0,0),rel_force=F){
   if (typeof(filename1)=='character'){
     file1<-read.csv(filename1,header=TRUE, row.names=1,stringsAsFactors = FALSE)
   } else if (typeof(filename1)=='list'){
@@ -41,8 +42,8 @@ SimDataCleanJoint<-function(filename1,filename2,kmin=2,rel='Joint',normvector=li
   }
   file1<-filet[,1:coln1]
   file2<-filet[,(coln1+1):coln]
-  data1<-SimDataClean(file1,kmin=kmin_sub[[1]],rel,normvector[[1]],logoption)
-  data2<-SimDataClean(file2,kmin=kmin_sub[[2]],rel,normvector[[2]],logoption)
+  data1<-SimDataClean(file1,kmin=kmin_sub[[1]],rel,normvector[[1]],logoption,rel_force = rel_force)
+  data2<-SimDataClean(file2,kmin=kmin_sub[[2]],rel,normvector[[2]],logoption,rel_force = rel_force)
   dataout<-list("DF1"=data1,"DF2"=data2)
   return(dataout)
 }

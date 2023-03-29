@@ -9,7 +9,9 @@ SimDataClean(
   kmin = 2,
   rel = "Within",
   normvector = "None",
-  logoption = TRUE
+  logoption = TRUE,
+  rel_force = FALSE,
+  sigthresh = TRUE
 )
 }
 \arguments{
@@ -17,11 +19,13 @@ SimDataClean(
 
 \item{kmin}{The minimum number of observations needed for a glycopeptide to be real. Default=2}
 
-\item{rel}{Pick if values should be normalized relative to the max total abundance of any column('Within'), to a given value (NUMERIC), or read as is('AsIs'). Recommended numeric is the max of both columns for a given value. Default = 'Within'}
+\item{rel}{Pick if values should be normalized relative to the max total abundance of any column('Within'), to a given value (NUMERIC), or read as is('AsIs'). Recommended numeric is the max of both columns for a given value. Default = 'Within'. Only runs if no normvector given, or if rel_force=T}
 
 \item{normvector}{A vector for normalizing signal between samples, usually based on the XIC. Default: 'None' reads values as is; 'Relative' scales samples to their overall signal (assuming equal signal distribution). Providing a vector multiplies sample glycopeptides by that vector}
 
 \item{logoption}{Boolean indicating use of log transformation on values. This occurs after normalization and before relativity. Default= TRUE}
+
+\item{rel_force}{Default=FALSE. If true, forces standardization by total signal even when given normvector.}
 }
 \value{
 The normalized and standardized relative log abundance dataframe.

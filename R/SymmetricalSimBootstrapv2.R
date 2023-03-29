@@ -8,12 +8,13 @@
 #' @param mn Default=FALSE. In default settings it adjusts the distance scaling by average presence. Setting it to a numeric value will use that as a constant instead. (Recommended 1:2)
 #' @param logopt Boolean indicating the use of the log transform before relative scaling of abundance. Default=TRUE
 #' @param normvec Optional: the normalization vectors to adjust signal abundance between samples. Default=list('None','None')
+#' @param rel_force Boolean to force relativization in addition to TIC normalization. Default=FALSE
 #'
 #' @return Similarity Object
 #' @export
 #'
 #' @examples #
-SymmetricalSimBootstrapV2<-function(filename1,filename2,kmin=2,rel='Joint',MVCorrection=TRUE,mn=FALSE,logopt=TRUE,normvec=list('None','None')){
+SymmetricalSimBootstrapV2<-function(filename1,filename2,kmin=2,rel='Joint',MVCorrection=TRUE,mn=FALSE,logopt=TRUE,normvec=list('None','None'),rel_force=FALSE){
   #load data and acquire glycopeptides
   datalist<-SimDataCleanJoint(filename1,filename2,kmin,rel,normvector = normvec,logoption = logopt)
   file1<-datalist$DF1
@@ -59,6 +60,6 @@ SymmetricalSimBootstrapV2<-function(filename1,filename2,kmin=2,rel='Joint',MVCor
   ncombns<-length(tanN)
   NullOut<-data.frame(matrix(tanN,nrow=ncombns,ncol = 1))
   colnames(NullOut)<-c('NullTani')
-  FinalOut<-list("Summary"=TaniOut,"RankInfo"=tanmathold,"NullRankInfo"=tanmatholdN,"NullOut"=NullOut,'WeightedContributions'=list(tanmatholdW,tanmatholdNW),"RankInfoActual"=tanmatAFinal,"Actual"=taniActualF,"Boot"=list(combo1,combo2,comboN$NDis1,comboN$NDis2))
+  FinalOut<-list("Summary"=TaniOut,"RankInfo"=list("Test"=tanmathold,"Null"=tanmatholdN),"NullOut"=NullOut,'WeightedContributions'=list("Test"=tanmatholdW,"Null"=tanmatholdNW),"RankInfoActual"=tanmatAFinal,"Actual"=taniActualF,"Boot"=list(combo1,combo2,comboN$NDis1,comboN$NDis2))
   return(FinalOut)
 }

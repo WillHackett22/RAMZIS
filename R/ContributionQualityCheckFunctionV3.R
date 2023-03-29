@@ -1,6 +1,6 @@
-#' ContributionQualityCheckFunction
+#' ContributionQualityCheckFunction for use with RankingQualityFunctionV3
 #'
-#' @param SimilarityObj TestnullSimilarity Object
+#' @param TestSimObj Test Similarity Object
 #' @param InternalSimObj1 Internal Similarity object of first group
 #' @param InternalSimObj2 Internal similarity object of second group
 #'
@@ -8,8 +8,8 @@
 #' @export
 #'
 #' @examples #
-ContributionQualityCheckFunction<-function(SimilarityObj,InternalSimObj1,InternalSimObj2){
-  TestCont<-SimilarityObj$RankInfo$Test
+ContributionQualityCheckFunctionV3<-function(TestSimObj,InternalSimObj1,InternalSimObj2){
+  TestCont<-TestSimObj$Numerator
   ConObj1<-ContributionQualityCheckSubFunction(InternalSimObj1$InternalRankingInfo,TestCont)
   PercOut1<-ConObj1$Perc
   RelOut1<-ConObj1$Rel
