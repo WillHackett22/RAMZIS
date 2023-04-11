@@ -7,6 +7,7 @@
 #' @param k The scaling factor by which densitys are adjusted. The deafult converts from proportion to percentage. Default=100
 #'
 #' @return Density Object akin to base::density()
+#' @export
 #' @import stats
 #'
 #' @examples

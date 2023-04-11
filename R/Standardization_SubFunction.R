@@ -14,11 +14,17 @@ Standardization_SubFunction<-function(df,rel='Within'){
     scale<-rel
   } else if (rel=='AsIs'){
     scale<-1
+  } else if (rel=="Self"){
+    scale<-colSums(df,na.rm = T)
   } else {
     print(paste0('rel invalid'))
   }
   for (i in 1:ncol(df)){
-    df[,i]<- as.numeric(df[,i])/scale
+    if (rel!="Self"){
+      df[,i]<- as.numeric(df[,i])/scale
+    } else {
+      df[,i]<- as.numeric(df[,i])/scale[i]
+    }
   }
   return(df)
 }

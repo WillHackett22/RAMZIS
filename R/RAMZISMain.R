@@ -16,13 +16,16 @@
 #' @param logopt Default=TRUE
 #' @param normvec Default=c('None','None')
 #' @param rel_force Default=FALSE
+#' @param QualityInfo Default="WeightedContributions" Alternative="Numerator"
+#' @param RankingInfo Default="Numerator" Alternative="WeightedContributions"
 #'
 #' @return Automated RAMZIS Output Currently underdevelopment
 #' @export
 #'
 #' @examples #
-RAMZISMain<-function(filename1,filename2,alpha=0.05,beta=0.20,conf_thresh=2,int_thresh=0.25,observedbounds=c("ZScore",3),
-                     kmin=2,kmin_int=1,rel="Joint",MVCorrection=TRUE,mn=FALSE,verbose=T,logopt=TRUE,normvec=c('None','None'),rel_force=FALSE){
+RAMZISMain<-function(filename1,filename2,alpha=0.05,beta=0.20,conf_thresh=2,int_thresh=0.25,observedbounds=c("ZScore",2),
+                     kmin=2,kmin_int=1,rel="Joint",MVCorrection=TRUE,mn=FALSE,verbose=T,logopt=TRUE,normvec=c('None','None'),
+                     rel_force=FALSE,QualityInfo="WeightedContributions",RankingInfo="Numerator"){
   #load data and clean
   datalist<-SimDataCleanJoint(filename1,filename2,kmin,rel,normvector = normvec,logoption = logopt)
   file1<-datalist$DF1
@@ -59,13 +62,20 @@ RAMZISMain<-function(filename1,filename2,alpha=0.05,beta=0.20,conf_thresh=2,int_
   taniActualF<-ActualTempSimObject$Similarity
 
   ObsSim<-ObservedSimilarityStats(TestTempSimObject$Similarity,ActualTempSimObject$Similarity)
-  RankingData<-RankingQualityFunctionV3(TestTempSimObject,NullTempSimObject,ActualTempSimObject,InternalSimObj1,InternalSimObj2)
+  RankingData<-RankingQualityFunctionV3(TestTempSimObject,NullTempSimObject,ActualTempSimObject,InternalSimObj1,InternalSimObj2,QualityInfo,RankingInfo)
   InternalOverlap1<-OverlapCalculator(InternalSimObj1$InternalSimilarity,TestTempSimObject$Similarity)
   InternalOverlap2<-OverlapCalculator(InternalSimObj2$InternalSimilarity,TestTempSimObject$Similarity)
   ConfInt1<-InternalConfidenceScore(InternalSimObj1$InternalSimilarity,TestTempSimObject$Similarity,InternalOverlap1)
   ConfInt2<-InternalConfidenceScore(InternalSimObj2$InternalSimilarity,TestTempSimObject$Similarity,InternalOverlap2)
   ModalityObj<-ModalityTest(list(combo1,combo2),InternalSimObj1$InternalSimilarity,InternalSimObj2$InternalSimilarity)
   #check if actual similarity is within bounds of Test Similarity
+  if (typeof(filename1)=="list"){
+    filename1<-"File_1"
+  }
+  if (typeof(filename2)=="list"){
+    filename2<-"File_2"
+  }
+
   if (!is.numeric(observedbounds)){
     if (observedbounds[1]=="ZScore"){
       TMean<-mean(TestTempSimObject$Similarity,na.rm=T)
@@ -101,6 +111,7 @@ RAMZISMain<-function(filename1,filename2,alpha=0.05,beta=0.20,conf_thresh=2,int_
       print(paste0(filename2," likely has outliers due to multimodality."))
     }
     print(paste0("Test Similarity Modeling Quality:: Observed Similarity should be between ",round(observedb[1],3)," and ",round(observedb[2],3)))
+    print(paste0("Observed Similarity is ",round(ActualTempSimObject$Similarity,3)))
     if (TestBoundCheck<observedb[1] | TestBoundCheck>observedb[2]){
       print(paste0("RAMZIS Simulation does not acceptably model comparison of ",filename1," and ",filename2,"."))
       print("Consistent failures may indicate the existence of subgroups.")
@@ -112,7 +123,7 @@ RAMZISMain<-function(filename1,filename2,alpha=0.05,beta=0.20,conf_thresh=2,int_
   #Begin Null Similarity Generation for comparison
   #sample null
   ncombos<-NULLSAMPLER_Helper(coln1,coln2,sampn = 200)
-  NullTempSimObject<-NullSimilarityFunction(df1,df2,ncombos,MVCorrection,mn)
+  NullTempSimObject<-TestSimilarityFunction(mergedf,ncombos$NDis1,gj,mergedf,ncombos$NDis2,gj,MVCorrection,mn)
   NullOverlap<-OverlapCalculator(NullTempSimObject$Similarity,TestTempSimObject$Similarity)
 
   #General Comparison assessment
@@ -134,7 +145,7 @@ RAMZISMain<-function(filename1,filename2,alpha=0.05,beta=0.20,conf_thresh=2,int_
                       "Actual"=ActualTempSimObject$Similarity)
   RankingDataOut<-list("RankMatrix"=RankingData,
                        "RankData"=list("Test"=TestTempSimObject$Numerator,"Null"=NullTempSimObject$Numerator,
-                                       "Internal1"=InternalSimObj1$InternalRankingInfo,"Internal2"=InternalSimObj2,
+                                       "Internal1"=InternalSimObj1$InternalRankingInfo,"Internal2"=InternalSimObj2$InternalRankingInfo,
                                        "Actual"=ActualTempSimObject$Contribution))
   WeightedContributions<-list("Test"=TestTempSimObject$WeightedContributions,"Null"=NullTempSimObject$WeightedContributions,
                               "Internal1"=InternalSimObj1$WeightedContributions,"Internal2"=InternalSimObj2$WeightedContributions)
@@ -143,20 +154,30 @@ RAMZISMain<-function(filename1,filename2,alpha=0.05,beta=0.20,conf_thresh=2,int_
                    "Internal2"=list("Confidence"=ConfInt2,"Overlap"=InternalOverlap2$PercOverlap,"Alpha"=InternalOverlap2$FP,"Beta"=InternalOverlap2$FN,"Modality"=ModalityObj$Int2),
                    "Test"=list("ZScore"=ObsSim$ZScore,"Percentile"=ObsSim$Percentile))
   GenComOut<-list("Alpha"=NullOverlap$FP,"Beta"=NullOverlap$FN)
-  RankTrunc<-RankingData[,c("ZScore","PassOverall","MinimumObs")]
+  # Summarize Ranking Data Matrix
+  RankTrunc<-RankingData[,c("ZScore","PassOverall")]
   FailCause<-rep("Passed",dim(RankTrunc)[1])
+  gpRanked<-row.names(RankingData)
   for (j in 1:dim(RankingData)[1]){
     if (RankingData$PassOverall[j]==FALSE){
       f1p<-RankingData$`Overlap%_1`[j]
       f2p<-RankingData$`Overlap%_2`[j]
       if (!is.na(f1p) & !is.na(f2p)){
         if (f1p==0 & f2p==1){
-          FailCause[j]<-"UnseenIn_File2"
+          if (gpRanked[j] %in% row.names(file2)){
+            FailCause[j]<-"LowQualityIn_File2"
+          } else {
+            FailCause[j]<-"UnseenIn_File2"
+          }
         } else if (f1p==1 & f2p==0){
-          FailCause[j]<-"UnseenIn_File1"
+          if (gpRanked[j] %in% row.names(file1)){
+            FailCause[j]<-"LowQualityIn_File1"
+          } else {
+            FailCause[j]<-"UnseenIn_File1"
+          }
         } else {
-          if (f1p>=0.25){
-            if (f2p>=0.25){
+          if (f1p>0.25){
+            if (f2p>0.25){
               FailCause[j]<-"LowQualityIn_Both"
             } else {
               FailCause[j]<-"LowQualityIn_File1"
@@ -165,14 +186,18 @@ RAMZISMain<-function(filename1,filename2,alpha=0.05,beta=0.20,conf_thresh=2,int_
             FailCause[j]<-"LowQualityIn_File2"
           }
         }
+      } else{
+        FailCause[j]<-"BelowMinimumObs"
       }
-    } else{
-      FailCause[j]<-"BelowMinimumObs"
     }
   }
+  Int1PlotData<-GGFormatterInternal(TestTempSimObject$Similarity,InternalSimObj1$InternalSimilarity,1)
+  Int2PlotData<-GGFormatterInternal(TestTempSimObject$Similarity,InternalSimObj2$InternalSimilarity,2)
+  NullPlotData<-GGFormatterGeneral(TestTempSimObject$Similarity,NullTempSimObject$Similarity)
+  PlotData<-list("Internal1"=Int1PlotData,"Internal2"=Int2PlotData,"General"=NullPlotData)
   RankTrunc$FailCause<-FailCause
   SummaryOut<-list("QualityChecks"=QualityOut,"GeneralComparison"=GenComOut,"Rankings"=RankTrunc)
-  FinalOut<-list("Summary"=SummaryOut,"Similarity"=SimilarityOut,"RankInfo"=RankingDataOut,
+  FinalOut<-list("Summary"=SummaryOut,"Similarity"=SimilarityOut,"PlotData"=PlotData,"RankInfo"=RankingDataOut,
             'WeightedContributions'=WeightedContributions,"Boot"=BootOut)
 
   return(FinalOut)

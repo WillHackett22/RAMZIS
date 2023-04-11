@@ -15,7 +15,7 @@ InternalConfidenceScore<-function(ReferenceDis,TestDis,OverlapData=NULL){
   }
   Alpha<-OverlapData$FP
   Beta<-OverlapData$FN
-  deltaR<-abs(mean(ReferenceDis,na.rm=T)-mean(TestDis,na.rm = T))
+  deltaR<-mean(ReferenceDis,na.rm=T)-mean(TestDis,na.rm = T)
   Confidence<-round(deltaR/sd(ReferenceDis,na.rm=T)*10^(-Alpha-Beta),2)
   return(Confidence)
 }

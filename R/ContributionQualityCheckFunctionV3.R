@@ -3,17 +3,18 @@
 #' @param TestSimObj Test Similarity Object
 #' @param InternalSimObj1 Internal Similarity object of first group
 #' @param InternalSimObj2 Internal similarity object of second group
+#' @param QualityInfo Default="WeightedContributions" Alternative is "Numerator"
 #'
 #' @return Contribution QC
 #' @export
 #'
 #' @examples #
-ContributionQualityCheckFunctionV3<-function(TestSimObj,InternalSimObj1,InternalSimObj2){
-  TestCont<-TestSimObj$Numerator
-  ConObj1<-ContributionQualityCheckSubFunction(InternalSimObj1$InternalRankingInfo,TestCont)
+ContributionQualityCheckFunctionV3<-function(TestSimObj,InternalSimObj1,InternalSimObj2,QualityInfo="WeightedContributions"){
+  TestCont<-TestSimObj[[QualityInfo]]
+  ConObj1<-ContributionQualityCheckSubFunctionV3(InternalSimObj1[[QualityInfo]],TestCont)
   PercOut1<-ConObj1$Perc
   RelOut1<-ConObj1$Rel
-  ConObj2<-ContributionQualityCheckSubFunction(InternalSimObj2$InternalRankingInfo,TestCont)
+  ConObj2<-ContributionQualityCheckSubFunctionV3(InternalSimObj2[[QualityInfo]],TestCont)
   PercOut2<-ConObj2$Perc
   RelOut2<-ConObj2$Rel
   PercOut<-MatrixMerge_Helper(PercOut1,PercOut2,na.rm=F)

@@ -7,8 +7,8 @@
 #' @export
 #'
 #' @examples #
-RankingByZScoreV3<-function(TestSimObj,NullSimObj){
-  ZData<-ZScoreContributionFunction(NullSimObj$Numerator,TestSimObj$Numerator)
+RankingByZScoreV3<-function(TestSimObj,NullSimObj,RankingInfo="Numerator"){
+  ZData<-ZScoreContributionFunction(NullSimObj[[RankingInfo]],TestSimObj[[RankingInfo]])
   ZMeans<-rowMeans(ZData,na.rm=T)
   return(sort(ZMeans))
 }

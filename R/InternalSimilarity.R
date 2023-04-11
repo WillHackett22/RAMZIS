@@ -63,7 +63,6 @@ InternalSimilarity<-function(filename,BootSet,kmin=1,rel="Within",MVCorrection=T
   T_1<-T1_
   T01<-T10
   PHold2<-PHold1
-
   T__Hold<-MatrixMerge_Helper(T1_,T_1)
   PHold<-MatrixMerge_Helper(PHold1,PHold2)
   #Bring T11 related terms together
@@ -73,7 +72,7 @@ InternalSimilarity<-function(filename,BootSet,kmin=1,rel="Within",MVCorrection=T
   #prevent duplicate comparisons
   TempSimObject<-SimilarityCalculation(T__Hold,T10,T01,PHold,ncomb1,ncomb1,mn)
   tanmathold<-TempSimObject$Numerator
-  tanmatholdW<-TempSimObject$Contribution
+  tanmatholdW<-TempSimObject$WeightedContributions
   tan1<-TempSimObject$Similarity
   keepidx<-c()
   for (j in 1:ncomb1){

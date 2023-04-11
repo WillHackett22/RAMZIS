@@ -19,7 +19,7 @@ ContributionQualityCheckSubFunctionV3<-function(ReferenceCont,TestCont){
     testval<-mean(unlist(tempcont[iN[j],1:rl]),na.rm=T)
     if ( (!is.na(testval))){
       if (!is.na(intval)){
-        tempout[iN[j],]<-OverlapCalculator(unlist(tempcont[iN[j],(rl+1):(rl+il)]),unlist(tempcont[iN[j],1:rl]))$PercOverlap
+        tempout[iN[j],]<-OverlapCalculator(unlist(tempcont[iN[j],(rl+1):(rl+il)]),unlist(tempcont[iN[j],1:rl]),Contribution = T)$PercOverlap
         relval<-intval-testval
         tempout2[iN[j],]<-relval
         tempout3[iN[j],]<-testval

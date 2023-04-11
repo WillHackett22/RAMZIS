@@ -2,19 +2,36 @@
 #'
 #' @param ReferenceDis reference distribution, generally higher
 #' @param TestDis comparison distribution
+#' @param zerohandling Default=F, if T, when the Test max is zero it splits the distribution across the two points bordering. As normal, all values between -0.001 and 0.001 are 1
+#' @param Contribution Default=F, Make T when doing contribution overlaps for higher resolution
 #'
 #' @return Overlap statistics
 #' @export
 #'
 #' @examples #
-OverlapCalculator<-function(ReferenceDis,TestDis,zerohandling=F){
+OverlapCalculator<-function(ReferenceDis,TestDis,zerohandling=F,Contribution=F){
   #Let the distributions be the needed input
-  dR<-DENSITY_RD(ReferenceDis)
-  dT<-DENSITY_RD(TestDis)
+  if (Contribution==T){
+    lb<-min(c(ReferenceDis,TestDis))
+    ub<-max(c(ReferenceDis,TestDis))
+    offset<-(lb-ub)/10
+    lb<-lb-offset
+    ub<-ub+offset
+    dR<-DENSITY_RD(ReferenceDis,lb=lb,ub=ub)
+    dT<-DENSITY_RD(TestDis,lb=lb,ub=ub)
+  } else {
+    dR<-DENSITY_RD(ReferenceDis)
+    dT<-DENSITY_RD(TestDis)
+  }
   if (max(TestDis)==0){
     dT$y<-rep(0,length(dT$y))
     if (zerohandling){
-      dT$y[c(43,44)]<-1/(dT$x[44]-dT$x[43])
+      zdxl<-which(dT$x<0)[length(which(dT$x<0))]
+      zdxu<-which(dT$x>0)[1]
+      if (zdxl==zdxu){
+        zdxu<-zdxu+1
+      }
+      dT$y[c(zdxl,zdxu)]<-1/(dT$x[zdxl]-dT$x[zdxu])
     } else {
       dT$y[which(dT$x>=-0.001 & dT$x<=0.001)]<-1
     }

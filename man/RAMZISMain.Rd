@@ -14,12 +14,13 @@ RAMZISMain(
   observedbounds = c("ZScore", 3),
   kmin = 2,
   kmin_int = 1,
-  rel = TRUE,
+  rel = "Joint",
   MVCorrection = TRUE,
   mn = FALSE,
   verbose = T,
-  logopt = FALSE,
-  normvec = c("None", "None")
+  logopt = TRUE,
+  normvec = c("None", "None"),
+  rel_force = FALSE
 )
 }
 \arguments{
@@ -49,9 +50,11 @@ RAMZISMain(
 
 \item{verbose}{default=TRUE}
 
-\item{logopt}{Default=FALSE}
+\item{logopt}{Default=TRUE}
 
 \item{normvec}{Default=c('None','None')}
+
+\item{rel_force}{Default=FALSE}
 }
 \value{
 Automated RAMZIS Output Currently underdevelopment

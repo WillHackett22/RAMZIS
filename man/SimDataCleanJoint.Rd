@@ -11,7 +11,8 @@ SimDataCleanJoint(
   rel = "Joint",
   normvector = list("None", "None"),
   logoption = TRUE,
-  kmin_sub = list(0, 0)
+  kmin_sub = list(0, 0),
+  rel_force = F
 )
 }
 \arguments{
@@ -28,6 +29,8 @@ SimDataCleanJoint(
 \item{logoption}{Boolean indicating use of log transformation. Default=TRUE}
 
 \item{kmin_sub}{Minimum number of identifications needed to be seen in a given file. Default=list(0,0)}
+
+\item{rel_force}{Forces relativization even if normalization vector is given. Default=F}
 }
 \value{
 Normalized and standardized cleaned data

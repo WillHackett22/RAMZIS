@@ -5,14 +5,16 @@
 #' @param ActualSimObj Observed/Actual Similarity Object
 #' @param InternalSimObj1 Internal Similarity Object 1
 #' @param InternalSimObj2 Internal Similarity Object 2
+#' @param QualityInfo Default="WeightedContributions"
+#' @param RankingInfo Default="Numerator"
 #'
 #' @return Quality and ranking object
 #' @export
 #'
 #' @examples #
-RankingQualityFunctionV3<-function(TestSimObj,NullSimObj,ActualSimObj,InternalSimObj1,InternalSimObj2){
-  CQData<-ContributionQualityCheckFunctionV3(TestSimObj,InternalSimObj1,InternalSimObj2)
-  RData<-RankingByZScoreV3(TestSimObj,NullSimObj)
+RankingQualityFunctionV3<-function(TestSimObj,NullSimObj,ActualSimObj,InternalSimObj1,InternalSimObj2,QualityInfo="WeightedContributions",RankingInfo="Numerator"){
+  CQData<-ContributionQualityCheckFunctionV3(TestSimObj,InternalSimObj1,InternalSimObj2,QualityInfo)
+  RData<-RankingByZScoreV3(TestSimObj,NullSimObj,RankingInfo)
   RankingDataSummary<-MatrixMerge_Helper(CQData,RData,na.rm=F)
   colnames(RankingDataSummary)<-c("QualityGroup1","QualityGroup2","Overlap%_1","Overlap%_2","RelDiff_1","RelDiff_2","TestConMean","ZScore")
   tempval1<-RankingDataSummary$QualityGroup1

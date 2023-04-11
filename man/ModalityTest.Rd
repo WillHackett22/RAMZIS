@@ -4,14 +4,14 @@
 \alias{ModalityTest}
 \title{ModalityTest tests for over or under-represented membership in peaks}
 \usage{
-ModalityTest(SimObject, IntObject1, IntObject2)
+ModalityTest(BootSet, IntSim1, IntSim2)
 }
 \arguments{
-\item{SimObject}{Test-Null Similarity Object}
+\item{BootSet}{List of samplings produced for the Test and Internal comparisons}
 
-\item{IntObject1}{Internal Similarity Object}
+\item{IntObject1}{Internal Similarity}
 
-\item{IntObject2}{Internal Similarity Object}
+\item{IntObject2}{Internal Similarity}
 }
 \value{
 Rejection list of samples based on Modality criterion

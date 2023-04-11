@@ -36,7 +36,7 @@ SymmetricalSimBootstrapV2<-function(filename1,filename2,kmin=2,rel='Joint',MVCor
   #send to test similarity function
   TestTempSimObject<-TestSimilarityFunction(file1,combo1,gl1,file2,combo2,gl2,MVCorrection,mn)
   tanmathold<-TestTempSimObject$Numerator
-  tanmatholdW<-TestTempSimObject$Contribution
+  tanmatholdW<-TestTempSimObject$WeightedContributions
   tan1<-TestTempSimObject$Similarity
 
   #generate null samples
@@ -44,7 +44,7 @@ SymmetricalSimBootstrapV2<-function(filename1,filename2,kmin=2,rel='Joint',MVCor
   #send to test similarity function with mergedf
   NullTempSimObject<-TestSimilarityFunction(mergedf,comboN$NDis1,gj,mergedf,comboN$NDis2,gj,MVCorrection,mn)
   tanmatholdN<-NullTempSimObject$Numerator
-  tanmatholdNW<-NullTempSimObject$Contribution
+  tanmatholdNW<-NullTempSimObject$WeightedContributions
   tanN<-NullTempSimObject$Similarity
   jacN<-rep(0,nrow(comboN$NDis1)*nrow(comboN$NDis2)) # jaccard holder depricated
 
