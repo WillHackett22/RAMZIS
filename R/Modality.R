@@ -25,7 +25,6 @@ Modality<-function(SimDist,threshold=.01){
   MinMat[,4]<-abs(MinMat[,2])<=threshold*SimDens$y[LocalMaximaIdx]
   MinMat[,5]<-abs(MinMat[,3])<=threshold*SimDens$y[LocalMaximaIdx]
   #chance that the height differentials are by random chance
-
   TempMin<-c(0,SimDens$x[LocalMinimaIdx],1)
   for (j in 1:length(LocalMaximaIdx)){
     temppeak<-which(TempMin[j]<=SimDist & SimDist<=TempMin[j+1])
@@ -34,7 +33,7 @@ Modality<-function(SimDist,threshold=.01){
     #MinMat[j,8]<-abs(TempMin[j+1]-TempMin[j])<=3*XSD
     MinMat[j,8]<-FALSE
   }
-  MinMat[,6]<-(sum(MinMat[,4])>0|sum(MinMat[,5])>0)
+  MinMat[,6]<-(MinMat[,4]>0|MinMat[,5]>0)
 
   while (sum(MinMat[,6])>0){
     rowpick<-which(MinMat[,4]|MinMat[,5])

@@ -2,24 +2,32 @@
 % Please edit documentation in R/PeptideCollapser.R
 \name{PeptideCollapser}
 \alias{PeptideCollapser}
-\title{PeptideCollapser Subset peptides down to a list of sequons}
+\title{PeptideCollapser turns one protein's glycreread output into a break down by glycosite.}
 \usage{
-PeptideCollapser(filename, kmin = 2, rel = TRUE, sequonvector)
+PeptideCollapser(
+  filename,
+  Outfilename = NULL,
+  verbose = T,
+  sequonvector = NULL,
+  gseps = "Curly"
+)
 }
 \arguments{
 \item{filename}{dataset to be subset}
 
-\item{kmin}{minimum number of glycopeptide observations Default=2}
+\item{Outfilename}{Defualt=NULL. If given string, writes each file with format Outfilename_sequonvectori.csv}
 
-\item{rel}{Boolean indicating use of relativization. Default=TRUE}
+\item{verbose}{Default=T. Sends output to console as list of dataframes}
 
-\item{sequonvector}{Sequon Vector}
+\item{sequonvector}{Sequon Vector to collapse peptides on. If Null, it goes by exact value. Be sure your sequons are distinct}
+
+\item{gsep}{Default="Curly" The delineators that separate the glycan from the peptide. Alternate Option="Square"}
 }
 \value{
-Returns dataset broken down by sequon (It does not separate by protein)
+Returns dataset broken down by sequon
 }
 \description{
-PeptideCollapser Subset peptides down to a list of sequons
+PeptideCollapser turns one protein's glycreread output into a break down by glycosite.
 }
 \examples{
 #

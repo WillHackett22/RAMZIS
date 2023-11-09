@@ -9,7 +9,9 @@ RankingQualityFunctionV3(
   NullSimObj,
   ActualSimObj,
   InternalSimObj1,
-  InternalSimObj2
+  InternalSimObj2,
+  QualityInfo = "WeightedContributions",
+  RankingInfo = "Numerator"
 )
 }
 \arguments{
@@ -22,6 +24,10 @@ RankingQualityFunctionV3(
 \item{InternalSimObj1}{Internal Similarity Object 1}
 
 \item{InternalSimObj2}{Internal Similarity Object 2}
+
+\item{QualityInfo}{Default="WeightedContributions"}
+
+\item{RankingInfo}{Default="Numerator"}
 }
 \value{
 Quality and ranking object

@@ -13,7 +13,10 @@ SimPlotGGBase(
   Confidence = NULL,
   legend.bool = T,
   themepick = theme_RAMZIS,
-  zopt = T
+  zopt = T,
+  xbounds = c(0, 1.1),
+  ybounds = "Auto",
+  ...
 )
 }
 \arguments{
@@ -34,6 +37,8 @@ SimPlotGGBase(
 \item{themepick}{Default=theme_RAMZIS. Theme object from ggplot2 for formatting.}
 
 \item{zopt}{Indicates use of Z-score for simulation validity over percentile. Default=T}
+
+\item{xbounds}{Default=c(0,1.1)}
 }
 \value{
 A similarity plot using ggplot2

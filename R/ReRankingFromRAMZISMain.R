@@ -4,10 +4,10 @@
 #' @param RankingInfo Default="Numerator" is the standard ranking info, "WeightedContributions" changes to the weighted contribution as ranking info
 #' @param QualityInfo Default="WeightedContributions" is the standard quality info, "Numerator" changes to the weighted contribution as quality info
 #'
-#' @return
+#' @return #RankingSummary
 #' @export
 #'
-#' @examples
+#' @examples #
 ReRankingFromRAMZISMain<-function(SimilarityObject,RankingInfo="Numerator",QualityInfo="WeightedContributions"){
   TestSimObj<-list("Numerator"=SimilarityObject$RankInfo$RankData$Test,"WeightedContributions"=SimilarityObject$WeightedContributions$Test)
   NullSimObj<-list("Numerator"=SimilarityObject$RankInfo$RankData$Null,"WeightedContributions"=SimilarityObject$WeightedContributions$Null)

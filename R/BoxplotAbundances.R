@@ -14,6 +14,8 @@
 #' @param GPOrder The ordering of boxplot labels. Default lists in default ggplot2 factorization. order should be passed as vector of GP names -after GlycanSimplifier- in level order
 #' @param GPSimplify Default=TRUE. Converts GlycReSoft style Glycopeptides into abbreviated format with GlycanSimplifier()
 #' @param ybounds Default="Default", if given ybounds, it will scale graph ybounds
+#' @param PepReplaceStr Default=NULL If replaced with string, will use that in place of the peptide at bottom
+#' @param XAxisLabel Default=NULL, If given string replaces default x-axis label
 #'
 #' @return ggplot object
 #' @export
@@ -21,10 +23,15 @@
 #'
 #' @examples #
 BoxplotAbundances<-function(filename1,filename2,normvector=list("None","None"),rel="Joint",rel_force=FALSE,logoption=T,
-                            group1,group2,PlotTitle,axislabelsize=6,zerofill=FALSE,GPOrder=T,GPSimplify=T,ybounds="Default"){
+                            group1,group2,PlotTitle,axislabelsize=6,zerofill=FALSE,GPOrder=T,GPSimplify=T,ybounds="Default",
+                            PepReplaceStr=NULL,XAxisLabel=NULL){
   df<-SimDataCleanJoint(filename1,filename2,normvector = normvector,rel=rel,rel_force=rel_force,logoption = logoption)
   df1<-df$DF1
   df2<-df$DF2
+  if (!is.null(PepReplaceStr)){
+    row.names(df1)<-gsub(".*\\{",paste0(PepReplaceStr,"{"),row.names(df1))
+    row.names(df2)<-gsub(".*\\{",paste0(PepReplaceStr,"{"),row.names(df2))
+  }
   ug<-unique(c(row.names(df1),row.names(df2)))
   if (zerofill==TRUE){
     ggd2<-data.frame(matrix(NA,nrow=length(ug)*dim(df1)[2]+length(ug)*dim(df2)[2],ncol=4))
@@ -73,7 +80,11 @@ BoxplotAbundances<-function(filename1,filename2,normvector=list("None","None"),r
       for (l in 1:dim(df1)[2]){
         idx<-(((j-1)*dim(df1)[2])+l)
         ggd2$Sample[idx]<-colnames(df1)[l]
-        ggd2$Identification[idx]<-GlycanSimplifier(row.names(df1)[j])
+        if (GPSimplify){
+          ggd2$Identification[idx]<-GlycanSimplifier(row.names(df1)[j])
+        } else {
+          ggd2$Identification[idx]<-row.names(df1)[j]
+        }
         ggd2$RelativeLogAbundance[idx]<-df1[j,l]
       }
     }
@@ -81,7 +92,11 @@ BoxplotAbundances<-function(filename1,filename2,normvector=list("None","None"),r
       for (l in 1:dim(df2)[2]){
         idx<-(((j-1)*dim(df2)[2])+l+dim(df1)[1]*dim(df1)[2])
         ggd2$Sample[idx]<-colnames(df2)[l]
-        ggd2$Identification[idx]<-GlycanSimplifier(row.names(df2)[j])
+        if (GPSimplify){
+          ggd2$Identification[idx]<-GlycanSimplifier(row.names(df1)[j])
+        } else {
+          ggd2$Identification[idx]<-row.names(df1)[j]
+        }
         ggd2$RelativeLogAbundance[idx]<-df2[j,l]
       }
     }
@@ -90,14 +105,16 @@ BoxplotAbundances<-function(filename1,filename2,normvector=list("None","None"),r
   if (any(GPOrder!=TRUE)){
     ggd2$Identification<-factor(ggd2$Identification,levels=GPOrder)
   }
-
+  if (is.null(XAxisLabel)){
+    XAxisLabel<-'Peptide{Hex;HexNAc;Fuc;Neu5AC;Sulfation}'
+  }
   p<-ggplot2::ggplot(data=ggd2,mapping=ggplot2::aes(x=Identification,y=RelativeLogAbundance,fill=Group))+
     ggplot2::geom_boxplot(lwd=0.1,outlier.size = 0.1)+ggplot2::theme_bw()+
     ggplot2::theme(panel.grid.major = ggplot2::element_blank(), panel.grid.minor = ggplot2::element_blank(),panel.background = ggplot2::element_blank(),
           axis.line = ggplot2::element_line(colour = "black"),axis.text.x = ggplot2::element_text(angle=55,vjust=1,hjust=1),
           text=ggplot2::element_text(size=axislabelsize),plot.title = ggplot2::element_text(angle=0,size=10),legend.key.width = ggplot2::unit(0.25,'cm'))+
     ggplot2::geom_vline(xintercept=seq(1.5,numlines),linewidth=0.1)+
-    ggplot2::ggtitle(PlotTitle)+xlab('Peptide{Hex;HexNAc;Fuc;Neu5AC;Sulfation}')
+    ggplot2::ggtitle(PlotTitle)+xlab(XAxisLabel)
   if (any(ybounds!="Default")){
     p<-p+ggplot2::coord_cartesian(ylim=ybounds)
   }

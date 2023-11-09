@@ -27,12 +27,9 @@ SimilarityCalculation<-function(ABMatrix,AATerm,BBTerm,PresenceMatrix,AMatSize,B
     KTerm<-DistScale
   }
   T11<-T11mod*(KTerm)^-dT
+  Denominator<-c(melt(sapply(AATerm,VectorMatrixAddition,vector2=BBTerm))$value)
   tanmathold<-t(T11)
-  Denominator<-rep(0,dim(T11)[2])
-  for (j in 1:length(AATerm)){
-    Denominator[((j-1)*length(BBTerm)+1):(j*length(BBTerm))]<-unlist(AATerm[j])+unlist(BBTerm)
-  }
-  tanmatholdW<-t(t(T11)/(Denominator-colSums(T11,na.rm=T)))
+  tanmatholdW<-t(tanmathold/(Denominator-colSums(T11,na.rm=T)))
   tan1<-colSums(tanmatholdW,na.rm=T)
   Outlist<-list("Numerator"=T11,"WeightedContributions"=tanmatholdW,"Similarity"=tan1)
 }

@@ -8,12 +8,13 @@ TheoreticalDataGenerator(
   n,
   g,
   p,
-  w,
+  samplevar = 1,
   alp = 2,
   bet = 2,
-  maxim = TRUE,
-  w0 = 2,
-  w1 = 10
+  maxim = FALSE,
+  ratio_sig_N = 2,
+  rat_mult = 10,
+  fakeGPLeader = "Identification"
 )
 }
 \arguments{
@@ -23,15 +24,17 @@ TheoreticalDataGenerator(
 
 \item{p}{average presence}
 
-\item{w}{controls variance; if given a vector length equal to g the variance is controlled by identification; if given a vector length equal to n the variance is controlled by sample}
+\item{samplevar}{controls variance; lower is less variant if given a vector length equal to g the variance is controlled by identification; if given a vector length equal to n the variance is controlled by sample. default=0}
 
 \item{alp}{controls mean of the beta distribution used for sampling, if given a vector length g each identification has its own average}
 
-\item{maxim}{Boolean maximizing each column's identification}
+\item{maxim}{Boolean maximizing each column's identification. Default=FALSE}
 
-\item{w0}{number of significant digits to round alpha and beta to after finding the means}
+\item{ratio_sig_N}{number of significant digits to round alpha and beta to after finding the means. requires integers. default=2}
 
-\item{w1}{controls the variance of the beta distribution production}
+\item{rat_mult}{controls the variance of the beta distribution production. default=10}
+
+\item{fakeGPLeader}{name of identifications produced}
 
 \item{betcontrols}{mean of the beta distribution used for sampling, if given a vector length g each identification has its own average}
 }

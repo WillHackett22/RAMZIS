@@ -4,7 +4,13 @@
 \alias{GlycReRead}
 \title{GlycReRead: Read a set of GlycReSoft files and collate them into a joint dataset}
 \usage{
-GlycReRead(Filelist, Outfilename = NULL, verbose = T)
+GlycReRead(
+  Filelist,
+  Outfilename = NULL,
+  verbose = T,
+  JoinDuplicates = T,
+  CleanProtName = T
+)
 }
 \arguments{
 \item{Filelist}{A vector of exported GlycReSoft results files (.csv) of at least length 1.}
@@ -12,6 +18,10 @@ GlycReRead(Filelist, Outfilename = NULL, verbose = T)
 \item{Outfilename}{The save location for the collective dataset (don't include a filetype). If unused results will not be saved.}
 
 \item{verbose}{Default: TRUE  Returns dataset to environment}
+
+\item{JoinDuplicates}{Default: TRUE. Joins duplicate glycopeptides by summation on total_signals}
+
+\item{CleanProtName}{Default: TRUE. Turns all punctuation in protein names into '_'}
 }
 \value{
 Matrix of glycopeptide abundances with glycopeptides as rows and samples as columns

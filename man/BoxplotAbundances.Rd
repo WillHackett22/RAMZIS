@@ -8,11 +8,19 @@ BoxplotAbundances(
   filename1,
   filename2,
   normvector = list("None", "None"),
+  rel = "Joint",
+  rel_force = FALSE,
+  logoption = T,
   group1,
   group2,
   PlotTitle,
   axislabelsize = 6,
-  zerofill = FALSE
+  zerofill = FALSE,
+  GPOrder = T,
+  GPSimplify = T,
+  ybounds = "Default",
+  PepReplaceStr = NULL,
+  XAxisLabel = NULL
 )
 }
 \arguments{
@@ -21,6 +29,12 @@ BoxplotAbundances(
 \item{filename2}{The second .csv matrix RAMZIS_formatted file to be entered}
 
 \item{normvector}{The normalization vectors of the files in list format. Default=list("None","None")}
+
+\item{rel}{Default="Joint"}
+
+\item{rel_force}{Default=F}
+
+\item{logoption}{Default=T}
 
 \item{group1}{Name of the first sample group. Corresponds to first file. Use string}
 
@@ -31,6 +45,16 @@ BoxplotAbundances(
 \item{axislabelsize}{size of axis text}
 
 \item{zerofill}{If glycopeptides are absent from one of the samples, they will be filled in with zero values. Default=FALSE}
+
+\item{GPOrder}{The ordering of boxplot labels. Default lists in default ggplot2 factorization. order should be passed as vector of GP names -after GlycanSimplifier- in level order}
+
+\item{GPSimplify}{Default=TRUE. Converts GlycReSoft style Glycopeptides into abbreviated format with GlycanSimplifier()}
+
+\item{ybounds}{Default="Default", if given ybounds, it will scale graph ybounds}
+
+\item{PepReplaceStr}{Default=NULL If replaced with string, will use that in place of the peptide at bottom}
+
+\item{XAxisLabel}{Default=NULL, If given string replaces default x-axis label}
 }
 \value{
 ggplot object

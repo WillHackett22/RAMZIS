@@ -4,10 +4,12 @@
 \alias{RankingByZScore}
 \title{RankingByZScore determines rank}
 \usage{
-RankingByZScore(SimilarityObj)
+RankingByZScore(SimilarityObj, RankInfo = "RankInfo")
 }
 \arguments{
-\item{SimilarityObj}{Similarity object}
+\item{SimilarityObj}{Similarity object from RAMZISMain()}
+
+\item{RankInfo}{Which information to use for ranking. Default="RankInfo", Alternative use is "WeightedContributions"}
 }
 \value{
 rankings

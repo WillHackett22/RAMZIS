@@ -3,6 +3,8 @@
 #' @param Filelist A vector of exported GlycReSoft results files (.csv) of at least length 1.
 #' @param Outfilename The save location for the collective dataset (don't include a filetype). If unused results will not be saved.
 #' @param verbose Default: TRUE  Returns dataset to environment
+#' @param JoinDuplicates Default: TRUE. Joins duplicate glycopeptides by summation on total_signals
+#' @param CleanProtName Default: TRUE. Turns all punctuation in protein names into '_'
 #'
 #' @return Matrix of glycopeptide abundances with glycopeptides as rows and samples as columns
 #' @export
@@ -11,7 +13,7 @@
 #' @examples
 #' #files<-c('gsoft1.csv','gsoft2.csv','gsoft3.csv')
 #' #AbundanceDF<-GlycReRead(files,'OutputSaveFile')
-GlycReRead<-function(Filelist,Outfilename=NULL,verbose=T){
+GlycReRead<-function(Filelist,Outfilename=NULL,verbose=T,JoinDuplicates=T,CleanProtName=T){
   if (length(Filelist)==1){
     GFiles<-utils::read.table(Filelist,stringsAsFactors = FALSE)
     GFiles<-GFiles[,1]
@@ -30,6 +32,19 @@ GlycReRead<-function(Filelist,Outfilename=NULL,verbose=T){
     GFile<-GFile[-which(GFile$total_signal==0),]
   }
   key<-paste(GFile$protein_name,'::',GFile$glycopeptide)
+  if (any(duplicated(key))){
+    if (JoinDuplicates==T){
+      while(any(duplicated(key))){
+        dx<-which(duplicated(key))[1]
+        kx<-which(key==key[1])[1]
+        GFile$total_signal[kx]<-GFile$total_signal[kx]+GFile$total_signal[dx]
+        GFile<-GFile[-dx,]
+        key<-paste(GFile$protein_name,'::',GFile$glycopeptide)
+      }
+    } else {
+      print("Duplicate Identifications detected. Please merge or rename.")
+    }
+  }
   abun<-GFile$total_signal
   tempdata<-data.frame(matrix(nrow=length(key),ncol=1))
   row.names(tempdata)<-key
@@ -71,11 +86,17 @@ GlycReRead<-function(Filelist,Outfilename=NULL,verbose=T){
     if (!is.null(Outfilename)){
       name<-strsplit(uniprot[j],"\\|")[[1]][length(strsplit(uniprot[j],"\\|")[[1]])]
       name<-strsplit(name,' ')[[1]][1]
-      write.csv(protdata,paste0(Outfilename,'_',name,'.csv'))
+      if (CleanProtName){
+        name<-gsub("[[:punct:]]","_",name)
+      }
+      utils::write.csv(protdata,paste0(Outfilename,'_',name,'.csv'))
     }
     if (verbose){
       name<-strsplit(uniprot[j],"\\|")[[1]][length(strsplit(uniprot[j],"\\|")[[1]])]
       name<-strsplit(name,' ')[[1]][1]
+      if (CleanProtName){
+        name<-gsub("[[:punct:]]","_",name)
+      }
       outlist[[name]]<-protdata
     }
   }

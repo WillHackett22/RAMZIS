@@ -6,25 +6,26 @@
 \usage{
 SimPlotInternal(
   PlotTitle,
-  dfSim,
+  SimilarityObject,
   Dataset,
-  OverlapData,
-  Confidence = NULL,
-  legend.bool = T
+  legend.bool = T,
+  themepick = theme_RAMZIS,
+  zopt = T,
+  ...
 )
 }
 \arguments{
 \item{PlotTitle}{The Plot Title}
 
-\item{dfSim}{Similarity Object Produced by RAMZISMain()}
+\item{SimilarityObject}{Similarity Object Produced by RAMZISMain()}
 
 \item{Dataset}{Selects which dataset to produce the internal plot of. Dataset=1 produces internal of the first dataset given. Dataset=2 produces the internal of the second dataset.}
 
-\item{OverlapData}{OverlapData from RAMZISMain() OverlapCalculator()}
-
-\item{Confidence}{From InternalConfidenceScore()}
-
 \item{legend.bool}{Boolean to produce legend or not}
+
+\item{themepick}{Default=theme_RAMZIS. Theme object from ggplot2 for formatting.}
+
+\item{zopt}{Indicates use of Z-score for simulation validity over percentile. Default=T}
 }
 \value{
 Internal Similarity Plot

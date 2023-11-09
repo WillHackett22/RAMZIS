@@ -22,7 +22,8 @@
 #' @return Automated RAMZIS Output Currently underdevelopment
 #' @export
 #'
-#' @examples #
+#' @examples ###
+#' #
 RAMZISMain<-function(filename1,filename2,alpha=0.05,beta=0.20,conf_thresh=2,int_thresh=0.25,observedbounds=c("ZScore",2),
                      kmin=2,kmin_int=1,rel="Joint",MVCorrection=TRUE,mn=FALSE,verbose=T,logopt=TRUE,normvec=c('None','None'),
                      rel_force=FALSE,QualityInfo="WeightedContributions",RankingInfo="Numerator"){
@@ -30,6 +31,10 @@ RAMZISMain<-function(filename1,filename2,alpha=0.05,beta=0.20,conf_thresh=2,int_
   datalist<-SimDataCleanJoint(filename1,filename2,kmin,rel,normvector = normvec,logoption = logopt)
   file1<-datalist$DF1
   file2<-datalist$DF2
+  if ((dim(file1)[1]<2) | (dim(file2)[1]<2)){
+    print("There is only one glycopeptide in one dataset. Use other metrics.")
+    quit()
+  }
   gl1<-c(row.names(file1))
   gl2<-c(row.names(file2))
   gj<-unique(c(gl1,gl2))

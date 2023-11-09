@@ -4,7 +4,7 @@
 \alias{RankingByZScoreV3}
 \title{RankingByZScoreV3 determines rank}
 \usage{
-RankingByZScoreV3(TestSimObj, NullSimObj)
+RankingByZScoreV3(TestSimObj, NullSimObj, RankingInfo = "Numerator")
 }
 \arguments{
 \item{TestSimObj}{Test Similarity object}

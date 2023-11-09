@@ -4,12 +4,12 @@
 \alias{VectorMatrixAddition}
 \title{VectorMatrixAddition determines the multiplication of a dataframe against a single vector}
 \usage{
-VectorMatrixAddition(vector1, dataframe1)
+VectorMatrixAddition(vector1, vector2)
 }
 \arguments{
 \item{vector1}{numeric vector}
 
-\item{dataframe1}{numeric dataframe/matrix}
+\item{vector2}{numeric dataframe/matrix}
 }
 \value{
 matrix of additions

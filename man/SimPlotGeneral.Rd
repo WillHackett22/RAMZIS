@@ -2,24 +2,33 @@
 % Please edit documentation in R/SimPlotGeneral.R
 \name{SimPlotGeneral}
 \alias{SimPlotGeneral}
-\title{SimPlotGeneral produces a plot of the densities of the similarity of the Test and Null Similarities}
+\title{SimPlotGeneral produces a plot of the densities of the similarity of the Test and Null Similarities with the SimilarityObject produced by RAMZISMain()}
 \usage{
-SimPlotGeneral(PlotTitle, dfSim, OverlapData, legend.bool = T)
+SimPlotGeneral(
+  PlotTitle,
+  SimilarityObject,
+  legend.bool = T,
+  themepick = theme_RAMZIS,
+  zopt = T,
+  ...
+)
 }
 \arguments{
-\item{PlotTitle}{PlaceHolder}
+\item{PlotTitle}{The Plot Title}
 
-\item{dfSim}{PlaceHolder}
+\item{SimilarityObject}{Similarity Object Produced by RAMZISMain()}
 
-\item{OverlapData}{PlaceHolder}
+\item{legend.bool}{Boolean to produce legend or not}
 
-\item{legend.bool}{PlaceHolder}
+\item{themepick}{Default=theme_RAMZIS. Theme object from ggplot2 for formatting.}
+
+\item{zopt}{Indicates use of Z-score for simulation validity over percentile. Default=T}
 }
 \value{
 PlaceHolder
 }
 \description{
-SimPlotGeneral produces a plot of the densities of the similarity of the Test and Null Similarities
+SimPlotGeneral produces a plot of the densities of the similarity of the Test and Null Similarities with the SimilarityObject produced by RAMZISMain()
 }
 \examples{
 #

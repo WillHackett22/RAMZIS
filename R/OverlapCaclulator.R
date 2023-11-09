@@ -2,27 +2,33 @@
 #'
 #' @param ReferenceDis reference distribution, generally higher
 #' @param TestDis comparison distribution
-#' @param zerohandling Default=F, if T, when the Test max is zero it splits the distribution across the two points bordering. As normal, all values between -0.001 and 0.001 are 1
+#' @param zerohandling Default=T, if T, when the Test max is zero it splits the distribution across the two points bordering. As normal, all values between -0.001 and 0.001 are 1
 #' @param Contribution Default=F, Make T when doing contribution overlaps for higher resolution
+#' @param na.rm Default=T. Removes NA values from ReferenceDis and TestDis
 #'
 #' @return Overlap statistics
 #' @export
 #'
 #' @examples #
-OverlapCalculator<-function(ReferenceDis,TestDis,zerohandling=F,Contribution=F){
+OverlapCalculator<-function(ReferenceDis,TestDis,zerohandling=T,Contribution=F,lb=-0.1,ub=1.1,na.rm=T){
   #Let the distributions be the needed input
+  if (na.rm){
+    if (sum(is.na(ReferenceDis))>0){
+      ReferenceDis<-ReferenceDis[-which(is.na(ReferenceDis))]
+    }
+    if (sum(is.na(TestDis))>0){
+      TestDis<-TestDis[-which(is.na(TestDis))]
+    }
+  }
   if (Contribution==T){
     lb<-min(c(ReferenceDis,TestDis))
     ub<-max(c(ReferenceDis,TestDis))
-    offset<-(lb-ub)/10
+    offset<-(ub-lb)/10
     lb<-lb-offset
     ub<-ub+offset
-    dR<-DENSITY_RD(ReferenceDis,lb=lb,ub=ub)
-    dT<-DENSITY_RD(TestDis,lb=lb,ub=ub)
-  } else {
-    dR<-DENSITY_RD(ReferenceDis)
-    dT<-DENSITY_RD(TestDis)
   }
+  dR<-DENSITY_RD(ReferenceDis,lb=lb,ub=ub)
+  dT<-DENSITY_RD(TestDis,lb=lb,ub=ub)
   if (max(TestDis)==0){
     dT$y<-rep(0,length(dT$y))
     if (zerohandling){
@@ -31,7 +37,7 @@ OverlapCalculator<-function(ReferenceDis,TestDis,zerohandling=F,Contribution=F){
       if (zdxl==zdxu){
         zdxu<-zdxu+1
       }
-      dT$y[c(zdxl,zdxu)]<-1/(dT$x[zdxl]-dT$x[zdxu])
+      dT$y[c(zdxl,zdxu)]<-1/(dT$x[zdxu]-dT$x[zdxl])
     } else {
       dT$y[which(dT$x>=-0.001 & dT$x<=0.001)]<-1
     }
@@ -45,9 +51,21 @@ OverlapCalculator<-function(ReferenceDis,TestDis,zerohandling=F,Contribution=F){
   FalseNegIDX<-which((sdT>=sdR) & (sdR>0.0001*max(sdR)))
   FN_R_ecdf<-ecdf(ReferenceDis)
 
-  FPcont<-which(diff(FalsePosIDX)!=1)
-  FNcont<-which(diff(FalseNegIDX)!=1)
+  if (length(FalsePosIDX)>2){
+    FPcont<-which(diff(FalsePosIDX)!=1)
+  } else if (length(FalsePosIDX)==2){
+    FPcont<-c(1)
+  } else {
+    FPcont<-c()
+  }
 
+  if (length(FalseNegIDX)>2){
+    FNcont<-which(diff(FalseNegIDX)!=1)
+  } else if (length(FalseNegIDX)==2){
+    FNcont<-c(1)
+  } else {
+    FNcont<-c()
+  }
   if (length(FPcont)>0){
     internalFPidx<-c(1)
     tempidx<-2
@@ -95,13 +113,17 @@ OverlapCalculator<-function(ReferenceDis,TestDis,zerohandling=F,Contribution=F){
   }
 
   if ((max(TestDis)==0) | (max(ReferenceDis==0))){
-    if (max(ReferenceDis==0) & max(TestDis==0)){
+    if ((max(ReferenceDis)==0) & (max(TestDis)==0)){
       FP<-0.5
       FN<-0.5
-    } else if (max(TestDis==0) & any(ReferenceDis==0)){
-      FN<-FN+sum(ReferenceDis==0)/length(ReferenceDis)
+    } else if ((max(TestDis)==0) & (any(ReferenceDis==0))){
+      zdxl<-which(dR$x<0)[length(which(dR$x<0))]
+      zdxu<-which(dR$x>0)[1]
+      FN<-FN+FN_R_ecdf(dR$x[zdxu])-FN_R_ecdf(dR$x[zdxl])
     } else if (max(ReferenceDis==0) & any(TestDis==0)){
-      FP<-FP+sum(TestDis==0)/length(TestDis)
+      zdxl<-which(dT$x<0)[length(which(dT$x<0))]
+      zdxu<-which(dT$x>0)[1]
+      FP<-FP+FP_T_ecdf(dT$x[zdxu])-FP_T_ecdf(dT$x[zdxl])
     } else if (max(TestDis==0) & all(ReferenceDis!=0)){
       FP<-0
       FN<-0
@@ -113,7 +135,7 @@ OverlapCalculator<-function(ReferenceDis,TestDis,zerohandling=F,Contribution=F){
   FN<-FN/(2-Overlap)
   FP_ibounds<-FalsePosIDX[internalFPidx]
   FN_ibounds<-FalseNegIDX[internalFNidx]
-  Output<-list('FP'=FP,'FN'=FN,'Overlap'=Overlap,'PercOverlap'=OverlapPerc,'FPi'=FP_ibounds,'FNi'=FN_ibounds)
+  Output<-list('FP'=FP,'FN'=FN,'Overlap'=Overlap,'PercOverlap'=OverlapPerc,'FPi'=FP_ibounds,'FNi'=FN_ibounds,"DensityBounds"=c(lb,ub))
   return(Output)
 
 }

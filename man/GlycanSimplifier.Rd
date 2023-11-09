@@ -4,7 +4,7 @@
 \alias{GlycanSimplifier}
 \title{GlycanSimplifier reduces GlycReSoft glycan notation into abbreviated form}
 \usage{
-GlycanSimplifier(glypep)
+GlycanSimplifier(glypep, glysplit = "\\\\{")
 }
 \arguments{
 \item{glypep}{The gylcopeptide to be shortened}

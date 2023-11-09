@@ -15,12 +15,12 @@
 #' @examples #
 TestSimilarityFunction<-function(df1,combo1,gl1,df2,combo2,gl2,MVCorrection,mn=FALSE){
   #iterate through all combinations used in within of df 1
-  T1_Obj<-GATHERER_Helper(gl1,combo1,df1,MVCorrection)
+  T1_Obj<-GATHERER_Helper(gl1,combo1,df1)
   T1_<-T1_Obj$Partial
   T10<-T1_Obj$Self
   PHold1<-T1_Obj$Presence
   #iterate through all combinations used in within of df 2
-  T_1Obj<-GATHERER_Helper(gl2,combo2,df2,MVCorrection)
+  T_1Obj<-GATHERER_Helper(gl2,combo2,df2)
   T_1<-T_1Obj$Partial
   T01<-T_1Obj$Self
   PHold1<-T_1Obj$Presence

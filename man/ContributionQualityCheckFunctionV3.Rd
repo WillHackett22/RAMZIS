@@ -7,7 +7,8 @@
 ContributionQualityCheckFunctionV3(
   TestSimObj,
   InternalSimObj1,
-  InternalSimObj2
+  InternalSimObj2,
+  QualityInfo = "WeightedContributions"
 )
 }
 \arguments{
@@ -16,6 +17,8 @@ ContributionQualityCheckFunctionV3(
 \item{InternalSimObj1}{Internal Similarity object of first group}
 
 \item{InternalSimObj2}{Internal similarity object of second group}
+
+\item{QualityInfo}{Default="WeightedContributions" Alternative is "Numerator"}
 }
 \value{
 Contribution QC

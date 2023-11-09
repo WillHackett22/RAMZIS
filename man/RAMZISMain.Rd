@@ -11,7 +11,7 @@ RAMZISMain(
   beta = 0.2,
   conf_thresh = 2,
   int_thresh = 0.25,
-  observedbounds = c("ZScore", 3),
+  observedbounds = c("ZScore", 2),
   kmin = 2,
   kmin_int = 1,
   rel = "Joint",
@@ -20,7 +20,9 @@ RAMZISMain(
   verbose = T,
   logopt = TRUE,
   normvec = c("None", "None"),
-  rel_force = FALSE
+  rel_force = FALSE,
+  QualityInfo = "WeightedContributions",
+  RankingInfo = "Numerator"
 )
 }
 \arguments{
@@ -55,6 +57,10 @@ RAMZISMain(
 \item{normvec}{Default=c('None','None')}
 
 \item{rel_force}{Default=FALSE}
+
+\item{QualityInfo}{Default="WeightedContributions" Alternative="Numerator"}
+
+\item{RankingInfo}{Default="Numerator" Alternative="WeightedContributions"}
 }
 \value{
 Automated RAMZIS Output Currently underdevelopment
@@ -63,5 +69,6 @@ Automated RAMZIS Output Currently underdevelopment
 RAMZISMain is intended to be the hassle free way to run RAMZIS. It should produce all the similarity comparisons necessary for a given set of files
 }
 \examples{
+###
 #
 }

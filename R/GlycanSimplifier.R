@@ -7,13 +7,13 @@
 #'
 #' @examples
 #' GlycanSimplifier('AMIN(N-Glycosylation)OACIDS{Hex:7; HexNAc:6; Neu5Ac:3}')
-GlycanSimplifier<-function(glypep){
+GlycanSimplifier<-function(glypep,glysplit='\\{'){
   list<-c(0,0,0,0,0) #hex, hexnac, fuc, neu5ac, sul/phos
-  targets<-c('Hex:[0-9];|Hex:[0-9][0-9];', 'HexNAc:[0-9]}|HexNAc:[0-9];', 'Fuc:[0-9];', 'Neu5Ac:[0-9]}|Neu5Ac:[0-9];', '\\@sulfation:[0-9];')
-  pepn<-gsub('\\{.*','',glypep)
+  targets<-c('Hex:[0-9];|Hex:[0-9][0-9];', 'HexNAc:[0-9]}|HexNAc:[0-9];', 'Fuc:[0-9];', 'Neu5Ac:[0-9]}|Neu5Ac:[0-9];', '\\@sulfate:[0-9];')
+  pepn<-gsub(paste0(glysplit,'.*'),'',glypep)
   pepn<-gsub('N\\(.*\\)','n',pepn)
   pepn<-gsub('\\(.*\\)','*',pepn)
-  glyn<-gsub('.*\\{','',glypep)
+  glyn<-gsub(pasteo('.*',glysplit),'',glypep)
   for (j in 1:length(targets)){
     ii<-gregexpr(targets[j],glyn)
     if (ii[[1]][1]!=-1){

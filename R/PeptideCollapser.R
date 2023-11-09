@@ -1,38 +1,66 @@
-#' PeptideCollapser Subset peptides down to a list of sequons
+#' PeptideCollapser turns one protein's glycreread output into a break down by glycosite.
 #'
 #' @param filename dataset to be subset
-#' @param kmin minimum number of glycopeptide observations Default=2
-#' @param rel Boolean indicating use of relativization. Default=TRUE
-#' @param sequonvector Sequon Vector
+#' @param Outfilename Defualt=NULL. If given string, writes each file with format Outfilename_sequonvectori.csv
+#' @param verbose Default=T. Sends output to console as list of dataframes
+#' @param sequonvector Sequon Vector to collapse peptides on. If Null, it goes by exact value. Be sure your sequons are distinct
+#' @param gsep Default="Curly" The delineators that separate the glycan from the peptide. Alternate Option="Square"
 #'
-#' @return Returns dataset broken down by sequon (It does not separate by protein)
+#' @return Returns dataset broken down by sequon
 #' @export
 #'
 #' @examples #
-PeptideCollapser<-function(filename,kmin=2,rel=TRUE,sequonvector){
-  datfile1<-SimDataClean(filename,kmin,rel)
+PeptideCollapser<-function(filename,Outfilename=NULL,verbose=T,sequonvector=NULL,gseps="Curly"){
+  df<-read.csv(filename,row.names = 1)
   #find sequon sections
   #find glycans associated with a sequon
   #merge same glycans for a given sequon
   #return datafile with sequon plus glycan
-  Rnames<-row.names(datfile1)
-  Cleaned<-gsub("\\s*\\{[^\\}]+\\}","",gsub("\\s*\\([^\\)]+\\)","",Rnames))
-  Outdat<-data.frame(matrix(NA,nrow=1,ncol=dim(datfile1)[2]))
-  idxterm<-0
-  NewRnameList<-c()
-  for (j in 1:length(sequonvector)){
-    Selection<-grep(sequonvector[j],Cleaned)
-    Glycans<-gsub(".*\\{|\\}","",gsub("\\s*\\([^\\)]+\\)","",Rnames[Selection]))
-    UniGly<-unique(Glycans)
-    for (l in 1:length(UniGly)){
-      RowGlyPep<-paste0(sequonvector[j],'{',UniGly[l],'}')
-      GlySel<-grep(UniGly[l],Glycans)
-      Outdat[idxterm+l,]<-colSums(datfile1[Selection,][GlySel,],na.rm=T)
-      NewRnameList<-c(NewRnameList,RowGlyPep)
-    }
-    idxterm<-idxterm+length(UniGly)
-
+  Rnames<-row.names(df)
+  if (gseps=="Curly"){
+    Cleaned<-gsub("\\s*\\{[^\\}]+\\}","",gsub("\\s*\\([^\\)]+\\)","",Rnames))
+  } else if (gseps=="Square"){
+    Cleaned<-gsub("\\s*\\[[^\\]+\\]","",gsub("\\s*\\([^\\)]+\\)","",Rnames))
   }
-  row.names(Outdat)<-NewRnameList
-  return(Outdat)
+
+  if (is.null(sequonvector)){
+    sequonvector<-unique(Cleaned)
+    exact=T
+  } else {
+    exact=F
+  }
+  outlist<-list()
+  for (j in 1:length(sequonvector)){
+    if (exact==T){
+      Selection<-which(Cleaned==sequonvector[j])
+    } else {
+      Selection<-grep(sequonvector[j],Cleaned)
+    }
+    if (gseps=="Curly"){
+      Glycans<-gsub(".*\\{|\\}","",gsub("\\s*\\([^\\)]+\\)","",Rnames[Selection]))
+    } else if (gseps=="Square"){
+      Glycans<-gsub(".*\\[|\\]","",gsub("\\s*\\([^\\)]+\\)","",Rnames[Selection]))
+    }
+
+    UniGly<-unique(Glycans)
+    out<-data.frame(matrix(NA,nrow=length(UniGly),ncol=ncol(df)))
+    colnames(out)<-colnames(df)
+    if (gseps=="Curly"){
+      sepg=c("{","}")
+    } else if (gseps=="Square"){
+      sepg=c("[","]")
+    }
+    row.names(out)<-paste0(sequonvector[j],sepg[1],UniGly,sepg[2])
+    for (l in 1:length(UniGly)){
+      GlySel<-grep(UniGly[l],Glycans)
+      out[paste0(sequonvector[j],sepg[1],UniGly[l],sepg[2]),]<-colSums(df[Selection,][GlySel,],na.rm=T)
+    }
+    outlist[[j]]<-out
+    if (!is.null(Outfilename)){
+      utils::write.csv(out,paste0(Outfilename,"_",sequonvector[j],'.csv'))
+    }
+  }
+  if (verbose){
+    return(outlist)
+  }
 }
