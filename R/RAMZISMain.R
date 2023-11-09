@@ -163,7 +163,7 @@ RAMZISMain<-function(filename1,filename2,alpha=0.05,beta=0.20,conf_thresh=2,int_
                    "Test"=list("ZScore"=ObsSim$ZScore,"Percentile"=ObsSim$Percentile))
   GenComOut<-list("Alpha"=NullOverlap$FP,"Beta"=NullOverlap$FN)
   # Summarize Ranking Data Matrix
-  if ((dim(file1)[1]>1) | (dim(file2)[1]>1)){
+  if ((dim(file1)[1]>1) & (dim(file2)[1]>1)){
     RankTrunc<-RankingData[,c("ZScore","PassOverall")]
     FailCause<-rep("Passed",dim(RankTrunc)[1])
     gpRanked<-row.names(RankingData)
