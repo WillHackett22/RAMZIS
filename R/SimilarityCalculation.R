@@ -28,7 +28,7 @@ SimilarityCalculation<-function(ABMatrix,AATerm,BBTerm,PresenceMatrix,AMatSize,B
     KTerm<-DistScale
   }
   T11<-T11mod*(KTerm)^-dT
-  Denominator<-c(reshape2::melt(matrix(sapply(AATerm,VectorMatrixAddition,vector2=BBTerm)))$value)
+  Denominator<-unlist(reshape2::melt(matrix(sapply(AATerm,VectorMatrixAddition,vector2=BBTerm)))$value)
   tanmathold<-t(T11)
   tanmatholdW<-t(tanmathold/(Denominator-colSums(T11,na.rm=T)))
   tan1<-colSums(tanmatholdW,na.rm=T)
