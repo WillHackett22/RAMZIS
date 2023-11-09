@@ -33,7 +33,6 @@ RAMZISMain<-function(filename1,filename2,alpha=0.05,beta=0.20,conf_thresh=2,int_
   file2<-datalist$DF2
   if ((dim(file1)[1]<2) | (dim(file2)[1]<2)){
     print("There is only one glycopeptide in one dataset. Use other metrics.")
-    quit()
   }
   gl1<-c(row.names(file1))
   gl2<-c(row.names(file2))
@@ -67,7 +66,11 @@ RAMZISMain<-function(filename1,filename2,alpha=0.05,beta=0.20,conf_thresh=2,int_
   taniActualF<-ActualTempSimObject$Similarity
 
   ObsSim<-ObservedSimilarityStats(TestTempSimObject$Similarity,ActualTempSimObject$Similarity)
-  RankingData<-RankingQualityFunctionV3(TestTempSimObject,NullTempSimObject,ActualTempSimObject,InternalSimObj1,InternalSimObj2,QualityInfo,RankingInfo)
+  if ((dim(file1)[1]<2) | (dim(file2)[1]<2)){
+    RankingData<-RankingQualityFunctionV3(TestTempSimObject,NullTempSimObject,ActualTempSimObject,InternalSimObj1,InternalSimObj2,QualityInfo,RankingInfo)
+  } else {
+    RankingData<-NULL
+  }
   InternalOverlap1<-OverlapCalculator(InternalSimObj1$InternalSimilarity,TestTempSimObject$Similarity)
   InternalOverlap2<-OverlapCalculator(InternalSimObj2$InternalSimilarity,TestTempSimObject$Similarity)
   ConfInt1<-InternalConfidenceScore(InternalSimObj1$InternalSimilarity,TestTempSimObject$Similarity,InternalOverlap1)
@@ -160,41 +163,45 @@ RAMZISMain<-function(filename1,filename2,alpha=0.05,beta=0.20,conf_thresh=2,int_
                    "Test"=list("ZScore"=ObsSim$ZScore,"Percentile"=ObsSim$Percentile))
   GenComOut<-list("Alpha"=NullOverlap$FP,"Beta"=NullOverlap$FN)
   # Summarize Ranking Data Matrix
-  RankTrunc<-RankingData[,c("ZScore","PassOverall")]
-  FailCause<-rep("Passed",dim(RankTrunc)[1])
-  gpRanked<-row.names(RankingData)
-  for (j in 1:dim(RankingData)[1]){
-    if (RankingData$PassOverall[j]==FALSE){
-      f1p<-RankingData$`Overlap%_1`[j]
-      f2p<-RankingData$`Overlap%_2`[j]
-      if (!is.na(f1p) & !is.na(f2p)){
-        if (f1p==0 & f2p==1){
-          if (gpRanked[j] %in% row.names(file2)){
-            FailCause[j]<-"LowQualityIn_File2"
-          } else {
-            FailCause[j]<-"UnseenIn_File2"
-          }
-        } else if (f1p==1 & f2p==0){
-          if (gpRanked[j] %in% row.names(file1)){
-            FailCause[j]<-"LowQualityIn_File1"
-          } else {
-            FailCause[j]<-"UnseenIn_File1"
-          }
-        } else {
-          if (f1p>0.25){
-            if (f2p>0.25){
-              FailCause[j]<-"LowQualityIn_Both"
+  if ((dim(file1)[1]>1) | (dim(file2)[1]>1)){
+    RankTrunc<-RankingData[,c("ZScore","PassOverall")]
+    FailCause<-rep("Passed",dim(RankTrunc)[1])
+    gpRanked<-row.names(RankingData)
+    for (j in 1:dim(RankingData)[1]){
+      if (RankingData$PassOverall[j]==FALSE){
+        f1p<-RankingData$`Overlap%_1`[j]
+        f2p<-RankingData$`Overlap%_2`[j]
+        if (!is.na(f1p) & !is.na(f2p)){
+          if (f1p==0 & f2p==1){
+            if (gpRanked[j] %in% row.names(file2)){
+              FailCause[j]<-"LowQualityIn_File2"
             } else {
+              FailCause[j]<-"UnseenIn_File2"
+            }
+          } else if (f1p==1 & f2p==0){
+            if (gpRanked[j] %in% row.names(file1)){
               FailCause[j]<-"LowQualityIn_File1"
+            } else {
+              FailCause[j]<-"UnseenIn_File1"
             }
           } else {
-            FailCause[j]<-"LowQualityIn_File2"
+            if (f1p>0.25){
+              if (f2p>0.25){
+                FailCause[j]<-"LowQualityIn_Both"
+              } else {
+                FailCause[j]<-"LowQualityIn_File1"
+              }
+            } else {
+              FailCause[j]<-"LowQualityIn_File2"
+            }
           }
+        } else{
+          FailCause[j]<-"BelowMinimumObs"
         }
-      } else{
-        FailCause[j]<-"BelowMinimumObs"
       }
     }
+  } else {
+    RankTrunc<-NULL
   }
   Int1PlotData<-GGFormatterInternal(TestTempSimObject$Similarity,InternalSimObj1$InternalSimilarity,1)
   Int2PlotData<-GGFormatterInternal(TestTempSimObject$Similarity,InternalSimObj2$InternalSimilarity,2)
