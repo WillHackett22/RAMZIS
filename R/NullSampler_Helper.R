@@ -7,6 +7,7 @@
 #' @param parity Makes it so samples chosen with equal probability to each dataset, rather than by equal weight to all samples regardless of dataset size. Default=T
 #'
 #' @return List of dataframes of samplings
+#'
 #' @export
 #'
 #' @examples #
@@ -77,7 +78,7 @@ NULLSAMPLER_Helper<-function(coln1,coln2,sampn=200,parity=T){
 #' @param coln2 samples in 2
 #' @param minsample minimum number of samples needed from each
 #'
-#' @return
+#' @return Equally represented dataset
 #' @export
 #'
 #' @examples #

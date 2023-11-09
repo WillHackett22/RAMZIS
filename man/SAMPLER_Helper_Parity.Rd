@@ -19,9 +19,9 @@ SAMPLER_Helper_Parity(combo, coln1, coln2, minsample = 2)
 \item{minsample}{minimum number of samples needed from each}
 }
 \value{
+Equally represented dataset
 
-
-
+Equally represented dataset
 }
 \description{
 Sampler_Helper_Parity is used by Null Sampler Helper function to ensure that the datasets are represented equally

@@ -10,6 +10,7 @@
 #'
 #' @return Similarity coefficients and the composite parts
 #' @export
+#' @import reshape2
 #'
 #' @examples #
 SimilarityCalculation<-function(ABMatrix,AATerm,BBTerm,PresenceMatrix,AMatSize,BMatSize,DistScale){
