@@ -66,7 +66,7 @@ RAMZISMain<-function(filename1,filename2,alpha=0.05,beta=0.20,conf_thresh=2,int_
   taniActualF<-ActualTempSimObject$Similarity
 
   ObsSim<-ObservedSimilarityStats(TestTempSimObject$Similarity,ActualTempSimObject$Similarity)
-  if ((dim(file1)[1]<2) | (dim(file2)[1]<2)){
+  if ((dim(file1)[1]>1) & (dim(file2)[1]>1)){
     RankingData<-RankingQualityFunctionV3(TestTempSimObject,NullTempSimObject,ActualTempSimObject,InternalSimObj1,InternalSimObj2,QualityInfo,RankingInfo)
   } else {
     RankingData<-NULL
