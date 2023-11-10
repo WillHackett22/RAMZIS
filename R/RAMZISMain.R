@@ -201,7 +201,8 @@ RAMZISMain<-function(filename1,filename2,alpha=0.05,beta=0.20,conf_thresh=2,int_
       }
     }
   } else {
-    RankTrunc<-NULL
+    RankTrunc<-list()
+    FailCause<-NULL
   }
   Int1PlotData<-GGFormatterInternal(TestTempSimObject$Similarity,InternalSimObj1$InternalSimilarity,1)
   Int2PlotData<-GGFormatterInternal(TestTempSimObject$Similarity,InternalSimObj2$InternalSimilarity,2)
