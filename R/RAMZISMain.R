@@ -9,7 +9,7 @@
 #' @param observedbounds Default= c("ZScore",3)
 #' @param kmin Default=2
 #' @param kmin_int Default=1
-#' @param rel Default=TRUE
+#' @param rel Default="Joint"
 #' @param MVCorrection default=TRUE
 #' @param mn Default=FALSE
 #' @param verbose default=TRUE

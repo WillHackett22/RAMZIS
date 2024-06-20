@@ -13,7 +13,7 @@ GlycanSimplifier<-function(glypep,glysplit='\\{'){
   pepn<-gsub(paste0(glysplit,'.*'),'',glypep)
   pepn<-gsub('N\\(.*\\)','n',pepn)
   pepn<-gsub('\\(.*\\)','*',pepn)
-  glyn<-gsub(pasteo('.*',glysplit),'',glypep)
+  glyn<-gsub(paste0('.*',glysplit),'',glypep)
   for (j in 1:length(targets)){
     ii<-gregexpr(targets[j],glyn)
     if (ii[[1]][1]!=-1){

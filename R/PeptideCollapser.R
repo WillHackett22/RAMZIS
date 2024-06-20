@@ -36,28 +36,29 @@ PeptideCollapser<-function(filename,Outfilename=NULL,verbose=T,sequonvector=NULL
     } else {
       Selection<-grep(sequonvector[j],Cleaned)
     }
-    if (gseps=="Curly"){
-      Glycans<-gsub(".*\\{|\\}","",gsub("\\s*\\([^\\)]+\\)","",Rnames[Selection]))
-    } else if (gseps=="Square"){
-      Glycans<-gsub(".*\\[|\\]","",gsub("\\s*\\([^\\)]+\\)","",Rnames[Selection]))
-    }
-
-    UniGly<-unique(Glycans)
-    out<-data.frame(matrix(NA,nrow=length(UniGly),ncol=ncol(df)))
-    colnames(out)<-colnames(df)
-    if (gseps=="Curly"){
-      sepg=c("{","}")
-    } else if (gseps=="Square"){
-      sepg=c("[","]")
-    }
-    row.names(out)<-paste0(sequonvector[j],sepg[1],UniGly,sepg[2])
-    for (l in 1:length(UniGly)){
-      GlySel<-grep(UniGly[l],Glycans)
-      out[paste0(sequonvector[j],sepg[1],UniGly[l],sepg[2]),]<-colSums(df[Selection,][GlySel,],na.rm=T)
-    }
-    outlist[[j]]<-out
-    if (!is.null(Outfilename)){
-      utils::write.csv(out,paste0(Outfilename,"_",sequonvector[j],'.csv'))
+    if (length(Selection)>0){
+      if (gseps=="Curly"){
+        Glycans<-gsub(".*\\{|\\}","",gsub("\\s*\\([^\\)]+\\)","",Rnames[Selection]))
+      } else if (gseps=="Square"){
+        Glycans<-gsub(".*\\[|\\]","",gsub("\\s*\\([^\\)]+\\)","",Rnames[Selection]))
+      }
+      UniGly<-unique(Glycans)
+      out<-data.frame(matrix(NA,nrow=length(UniGly),ncol=ncol(df)))
+      colnames(out)<-colnames(df)
+      if (gseps=="Curly"){
+        sepg=c("{","}")
+      } else if (gseps=="Square"){
+        sepg=c("[","]")
+      }
+      row.names(out)<-paste0(sequonvector[j],sepg[1],UniGly,sepg[2])
+      for (l in 1:length(UniGly)){
+        GlySel<-grep(UniGly[l],Glycans)
+        out[paste0(sequonvector[j],sepg[1],UniGly[l],sepg[2]),]<-colSums(df[Selection,][GlySel,],na.rm=T)
+      }
+      outlist[[j]]<-out
+      if (!is.null(Outfilename)){
+        utils::write.csv(out,paste0(Outfilename,"_",sequonvector[j],'.csv'))
+      }
     }
   }
   if (verbose){

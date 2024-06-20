@@ -24,8 +24,8 @@
 #' @examples #
 BoxplotAbundances<-function(filename1,filename2,normvector=list("None","None"),rel="Joint",rel_force=FALSE,logoption=T,
                             group1,group2,PlotTitle,axislabelsize=6,zerofill=FALSE,GPOrder=T,GPSimplify=T,ybounds="Default",
-                            PepReplaceStr=NULL,XAxisLabel=NULL){
-  df<-SimDataCleanJoint(filename1,filename2,normvector = normvector,rel=rel,rel_force=rel_force,logoption = logoption)
+                            PepReplaceStr=NULL,XAxisLabel=NULL,kmin=2){
+  df<-SimDataCleanJoint(filename1,filename2,normvector = normvector,rel=rel,rel_force=rel_force,logoption = logoption,kmin=kmin)
   df1<-df$DF1
   df2<-df$DF2
   if (!is.null(PepReplaceStr)){
@@ -61,7 +61,6 @@ BoxplotAbundances<-function(filename1,filename2,normvector=list("None","None"),r
       } else {
         gpabv<-gptgt
       }
-      gpabv<-GlycanSimplifier(gptgt)
       basej<-(((j-1)*dim(df2)[2])+length(ug)*dim(df1)[2])
       jdx<-(basej+1):(basej+dim(df2)[2])
       ggd2$Sample[jdx]<-colnames(df2)
@@ -93,9 +92,9 @@ BoxplotAbundances<-function(filename1,filename2,normvector=list("None","None"),r
         idx<-(((j-1)*dim(df2)[2])+l+dim(df1)[1]*dim(df1)[2])
         ggd2$Sample[idx]<-colnames(df2)[l]
         if (GPSimplify){
-          ggd2$Identification[idx]<-GlycanSimplifier(row.names(df1)[j])
+          ggd2$Identification[idx]<-GlycanSimplifier(row.names(df2)[j])
         } else {
-          ggd2$Identification[idx]<-row.names(df1)[j]
+          ggd2$Identification[idx]<-row.names(df2)[j]
         }
         ggd2$RelativeLogAbundance[idx]<-df2[j,l]
       }
@@ -113,8 +112,8 @@ BoxplotAbundances<-function(filename1,filename2,normvector=list("None","None"),r
     ggplot2::theme(panel.grid.major = ggplot2::element_blank(), panel.grid.minor = ggplot2::element_blank(),panel.background = ggplot2::element_blank(),
           axis.line = ggplot2::element_line(colour = "black"),axis.text.x = ggplot2::element_text(angle=55,vjust=1,hjust=1),
           text=ggplot2::element_text(size=axislabelsize),plot.title = ggplot2::element_text(angle=0,size=10),legend.key.width = ggplot2::unit(0.25,'cm'))+
-    ggplot2::geom_vline(xintercept=seq(1.5,numlines),linewidth=0.1)+
-    ggplot2::ggtitle(PlotTitle)+xlab(XAxisLabel)
+    ggplot2::geom_vline(xintercept=seq(1.5,numlines),linewidth=0.1)+ggplot2::scale_fill_manual(values=c('red','cyan'))+
+    ggplot2::ggtitle(PlotTitle)+ggplot2::xlab(XAxisLabel)
   if (any(ybounds!="Default")){
     p<-p+ggplot2::coord_cartesian(ylim=ybounds)
   }
