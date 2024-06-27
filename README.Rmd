@@ -18,37 +18,70 @@ knitr::opts_chunk$set(
 <!-- badges: start -->
 <!-- badges: end -->
 
-The goal of RAMZIS1 is to enable glycoproteomic researchers to make more confident conclusions and plan better follow-up experiments. It does so through contextual similarity and compares glycopeptides by glycosite. It can be used to assess the data quality, identify probable glycosite expression differentiation, and rank the most probable glycopeptide candidates.
+The goal of RAMZIS (Relative Assessment of m/z Identifications by Similarity) is to enable glycoproteomic researchers to make more confident conclusions and plan better follow-up experiments. It does so through contextual similarity and compares glycopeptides by glycosite. It can be used to assess the data quality, identify probable glycosite expression differentiation, and rank the most dissimilar glycopeptide candidates.
 
 ## Installation
 
-You can install the development version of RAMZIS1 like so:
+You can install the development version of RAMZIS like so:
 
 ``` r
-# 
+#RAMZIS needs devtools to be installed. If you have devtools then comment out the first line
+install.packages('devtools')
+library(devtools)
+install_github('WillHackett22/RAMZIS')
+library(RAMZIS1) 
 ```
+Please note that RAMZIS is called with library(RAMZIS1)
 
-## Example
-
-This is a basic example which shows you how to solve a common problem:
-
-```{r example}
+## Quick Start
+The code provided here is a full run of RAMZIS analysis. It will be broken up for explanation down below in the next tutorial update. This code must be altered to the correct system locations and to enable saving of data before being used .
+```{r quickstart}
 library(RAMZIS1)
-## basic example code
+#Data Cleaning and Glycosite Localizing
+FileLocation1<-'C:/Users/wehac/Documents/RAMZIS/extdata/TutorialData/Example1/InitialData'
+FileVector1<-paste0(FileLocation1,'/',list.files(FileLocation1)) 
+OutFileLocation1<-'C:/Users/wehac/Documents/RAMZIS/extdata/TutorialData/Example1/ProteinOutput'
+BaseOutFileName1<-paste0(OutFileLocation1,'/','Example1_Total')
+AbundanceObject1<-GlycReRead(Filelist = FileVector1,Outfilename=BaseOutFileName1,SaveResult=F)
+GlycositeObject1<-PeptideCollapser(paste0(BaseOutFileName1,'_A1AG1_HUMAN.csv'),Outfilename = paste0(BaseOutFileName1,'_A1AG1_HUMAN'),SaveResult=F)
+FileLocation2<-'C:/Users/wehac/Documents/RAMZIS/extdata/TutorialData/Example2/InitialData'
+FileVector2<-paste0(FileLocation2,'/',list.files(FileLocation2)) 
+OutFileLocation2<-'C:/Users/wehac/Documents/RAMZIS/extdata/TutorialData/Example2/ProteinOutput'
+BaseOutFileName2<-paste0(OutFileLocation2,'/','Example2_Total')
+AbundanceObject2<-GlycReRead(Filelist = FileVector2,Outfilename=BaseOutFileName2,SaveResult=F)
+GlycositeObject2<-PeptideCollapser(paste0(BaseOutFileName2,'_A1AG1_HUMAN.csv'),Outfilename = paste0(BaseOutFileName2,'_A1AG1_HUMAN'),SaveResult=F)
+#Comparison of a single glycosite
+GroupA<-"C:/Users/wehac/Documents/RAMZIS/extdata/TutorialData/Example3/Mix1_OR_Naive_AGP_ QDQCIYNTTYLNVQR.csv"
+GroupB<-"C:/Users/wehac/Documents/RAMZIS/extdata/TutorialData/Example3/Mix5_Naive_AGP_ QDQCIYNTTYLNVQR.csv"
+#Sample TIC of A and B
+Atic<-c( 6366043225.333893, 6280293021.018555, 4908589823.814423)
+Aveclog<-1/log(Atic) #use with logopt=T
+Btic<-c(5545327981.925079, 5467932130.947327, 5465953287.68222)
+Bveclog<-1/log(Btic)
+#plotting the abundances in A and B
+BoxplotEx<-BoxplotAbundances(GroupA,GroupB,normvector = list(Aveclog,Bveclog),
+                     PlotTitle="Group A vs Group B: AGP: YNTT",
+                     group1="A",group2="B",zerofill = T,axislabelsize = 6)
+BoxplotEx
+#Similarity Comparison Object
+SimilarityObject<-RAMZISMain(GroupA,GroupB,normvec = list(Aveclog,Bveclog))
+#Internal Similarities of A and B
+PlotInternalA<-SimPlotInternal("Internal of Group A: AGP: YNTT",SimilarityObject,1)
+PlotInternalA
+PlotInternalB<-SimPlotInternal("Internal of Group B: AGP: YNTT",SimilarityObject,2)
+PlotInternalB
+#General Comparison of A and B
+PlotGeneral<-SimPlotGeneral("General Comparison of A vs B: AGP: YNTT",SimilarityObject)
+PlotGeneral
+
 ```
 
-What is special about using `README.Rmd` instead of just `README.md`? You can include R chunks like so:
 
-```{r cars}
-summary(cars)
-```
+## GlycReRead & PeptideCollapser: Easier Usage of GlycReSoft Search Results
 
-You'll still need to render `README.Rmd` regularly, to keep `README.md` up-to-date. `devtools::build_readme()` is handy for this. You could also use GitHub Actions to re-render `README.Rmd` every time you push. An example workflow can be found here: <https://github.com/r-lib/actions/tree/v1/examples>.
+Regardless of the use of the rest of RAMZIS, GlycReSoft users are likely to find this function useful for collating GlycReSoft search results. The first function of interest from RAMZIS takes a vector of GlycReSoft search result .csv files and converts them into a 2D glycopeptide abundance matrix .csv and a .csv for each protein. 
 
-You can also embed plots, for example:
+The data used here are included in the RAMZIS package in the extdata folder.
 
-```{r pressure, echo = FALSE}
-plot(pressure)
-```
-
-In that case, don't forget to commit and push the resulting figure files, so they display on GitHub and CRAN.
+RAMZIS was made with funding from the NIH and is an open source R package. Please cite with: 
+WE Hackett, D Chang, L Carvalho, J Zaia “RAMZIS: a bioinformatic toolkit for rigorous assessment of the alterations to glycoprotein composition that occur during biological processes” Bioinformatics Advances 4(1):vbae012

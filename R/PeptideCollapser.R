@@ -1,17 +1,22 @@
 #' PeptideCollapser turns one protein's glycreread output into a break down by glycosite.
 #'
-#' @param filename dataset to be subset
-#' @param Outfilename Defualt=NULL. If given string, writes each file with format Outfilename_sequonvectori.csv
+#' @param filename Filename of dataset to be subset. Can be given data table
+#' @param Outfilename Default=NULL. If given string, writes each file with format Outfilename_sequonvectori.csv
 #' @param verbose Default=T. Sends output to console as list of dataframes
 #' @param sequonvector Sequon Vector to collapse peptides on. If Null, it goes by exact value. Be sure your sequons are distinct
 #' @param gsep Default="Curly" The delineators that separate the glycan from the peptide. Alternate Option="Square"
+#' @param SaveResults Default=TRUE. If FALSE, turns off .csv generation.
 #'
 #' @return Returns dataset broken down by sequon
 #' @export
 #'
 #' @examples #
-PeptideCollapser<-function(filename,Outfilename=NULL,verbose=T,sequonvector=NULL,gseps="Curly"){
-  df<-read.csv(filename,row.names = 1)
+PeptideCollapser<-function(filename,Outfilename=NULL,verbose=T,sequonvector=NULL,gseps="Curly",SaveResults=T){
+  if (is.character(filename)==1){
+    df<-utils::read.csv(filename,row.names = 1)
+  } else {
+    df<-filename
+  }
   #find sequon sections
   #find glycans associated with a sequon
   #merge same glycans for a given sequon
@@ -55,9 +60,11 @@ PeptideCollapser<-function(filename,Outfilename=NULL,verbose=T,sequonvector=NULL
         GlySel<-grep(UniGly[l],Glycans)
         out[paste0(sequonvector[j],sepg[1],UniGly[l],sepg[2]),]<-colSums(df[Selection,][GlySel,],na.rm=T)
       }
-      outlist[[j]]<-out
-      if (!is.null(Outfilename)){
-        utils::write.csv(out,paste0(Outfilename,"_",sequonvector[j],'.csv'))
+      outlist[[sequonvector[j]]]<-out
+      if (SaveResults){
+        if (!is.null(Outfilename)){
+          utils::write.csv(out,paste0(Outfilename,"_",sequonvector[j],'.csv'))
+        }
       }
     }
   }

@@ -1,0 +1,12 @@
+"","Example1_1","Example1_2","Example1_3"
+" AALAAFNAQNN(N-Glycosylation)GSNFQLEEISR{Fuc:1; Hex:5; HexNAc:4; Neu5Ac:2}",9618612.54736,8462986.08691,12436026.6367
+" AALAAFNAQNN(N-Glycosylation)GSNFQLEEISR{Fuc:2; Hex:5; HexNAc:4; Neu5Ac:1}",33600189.0962,30153877.0576,34885028.7563
+" AALAAFNAQNN(N-Glycosylation)GSNFQLEEISR{Hex:5; HexNAc:4; Neu5Ac:2}",94070601.1643,84672190.1833,95597388.8311
+" AALAAFNAQNN(N-Glycosylation)GSNFQLEEISR{Hex:6; HexNAc:5; Neu5Ac:3}",8864572.94824,0,10257125.2344
+" KVC(Carbamidomethyl)QDC(Carbamidomethyl)PLLAPLN(N-Glycosylation)DTR{Hex:5; HexNAc:4; Neu5Ac:2}",8566950.25293,9752882.78894,9493144.57227
+" VC(Carbamidomethyl)QDC(Carbamidomethyl)PLLAPLN(N-Glycosylation)DTR{Fuc:1; Hex:6; HexNAc:5; Neu5Ac:3}",5284623.93262,5066585.02734,7306582.94238
+" VC(Carbamidomethyl)QDC(Carbamidomethyl)PLLAPLN(N-Glycosylation)DTR{Fuc:2; Hex:5; HexNAc:4; Neu5Ac:1}",12433740.5645,10951289.1797,9138176.08838
+" VC(Carbamidomethyl)QDC(Carbamidomethyl)PLLAPLN(N-Glycosylation)DTR{Hex:4; HexNAc:3; Neu5Ac:1}",2634745.26489,0,2677676.23047
+" VC(Carbamidomethyl)QDC(Carbamidomethyl)PLLAPLN(N-Glycosylation)DTR{Hex:5; HexNAc:4; Neu5Ac:1}",2481148.68457,0,0
+" VC(Carbamidomethyl)QDC(Carbamidomethyl)PLLAPLN(N-Glycosylation)DTR{Hex:5; HexNAc:4; Neu5Ac:2}",193301316.571,181004793.443,200346477.518
+" VC(Carbamidomethyl)QDC(Carbamidomethyl)PLLAPLN(N-Glycosylation)DTR{Hex:6; HexNAc:5; Neu5Ac:3}",16404457.2358,16011206.3057,22106289.6357

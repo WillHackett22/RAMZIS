@@ -20,7 +20,8 @@ BoxplotAbundances(
   GPSimplify = T,
   ybounds = "Default",
   PepReplaceStr = NULL,
-  XAxisLabel = NULL
+  XAxisLabel = NULL,
+  kmin = 2
 )
 }
 \arguments{

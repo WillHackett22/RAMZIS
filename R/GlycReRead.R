@@ -5,6 +5,7 @@
 #' @param verbose Default: TRUE  Returns dataset to environment
 #' @param JoinDuplicates Default: TRUE. Joins duplicate glycopeptides by summation on total_signals
 #' @param CleanProtName Default: TRUE. Turns all punctuation in protein names into '_'
+#' @param SaveResults Default: TRUE. If FALSE, disables csv saving.
 #'
 #' @return Matrix of glycopeptide abundances with glycopeptides as rows and samples as columns
 #' @export
@@ -13,7 +14,7 @@
 #' @examples
 #' #files<-c('gsoft1.csv','gsoft2.csv','gsoft3.csv')
 #' #AbundanceDF<-GlycReRead(files,'OutputSaveFile')
-GlycReRead<-function(Filelist,Outfilename=NULL,verbose=T,JoinDuplicates=T,CleanProtName=T){
+GlycReRead<-function(Filelist,Outfilename=NULL,verbose=T,JoinDuplicates=T,CleanProtName=T,SaveResults=T){
   if (length(Filelist)==1){
     GFiles<-utils::read.table(Filelist,stringsAsFactors = FALSE)
     GFiles<-GFiles[,1]
@@ -106,9 +107,10 @@ GlycReRead<-function(Filelist,Outfilename=NULL,verbose=T,JoinDuplicates=T,CleanP
   }
   gpeprow<-vapply(strsplit(row.names(tempdata),'::'), `[`, 2, FUN.VALUE=character(1))
   row.names(tempdata)<-gpeprow
-
-  if (!is.null(Outfilename)){
-    utils::write.csv(tempdata,paste0(Outfilename,'.csv'))
+  if (SaveResults){
+    if (!is.null(Outfilename)){
+      utils::write.csv(tempdata,paste0(Outfilename,'.csv'))
+    }
   }
   if (verbose){
     return(outlist)

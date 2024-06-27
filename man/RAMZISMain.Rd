@@ -44,7 +44,7 @@ RAMZISMain(
 
 \item{kmin_int}{Default=1}
 
-\item{rel}{Default=TRUE}
+\item{rel}{Default="Joint"}
 
 \item{MVCorrection}{default=TRUE}
 

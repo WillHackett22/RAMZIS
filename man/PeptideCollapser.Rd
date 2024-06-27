@@ -9,17 +9,20 @@ PeptideCollapser(
   Outfilename = NULL,
   verbose = T,
   sequonvector = NULL,
-  gseps = "Curly"
+  gseps = "Curly",
+  SaveResults = T
 )
 }
 \arguments{
-\item{filename}{dataset to be subset}
+\item{filename}{Filename of dataset to be subset. Can be given data table}
 
-\item{Outfilename}{Defualt=NULL. If given string, writes each file with format Outfilename_sequonvectori.csv}
+\item{Outfilename}{Default=NULL. If given string, writes each file with format Outfilename_sequonvectori.csv}
 
 \item{verbose}{Default=T. Sends output to console as list of dataframes}
 
 \item{sequonvector}{Sequon Vector to collapse peptides on. If Null, it goes by exact value. Be sure your sequons are distinct}
+
+\item{SaveResults}{Default=TRUE. If FALSE, turns off .csv generation.}
 
 \item{gsep}{Default="Curly" The delineators that separate the glycan from the peptide. Alternate Option="Square"}
 }

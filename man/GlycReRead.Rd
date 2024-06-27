@@ -9,7 +9,8 @@ GlycReRead(
   Outfilename = NULL,
   verbose = T,
   JoinDuplicates = T,
-  CleanProtName = T
+  CleanProtName = T,
+  SaveResults = T
 )
 }
 \arguments{
@@ -22,6 +23,8 @@ GlycReRead(
 \item{JoinDuplicates}{Default: TRUE. Joins duplicate glycopeptides by summation on total_signals}
 
 \item{CleanProtName}{Default: TRUE. Turns all punctuation in protein names into '_'}
+
+\item{SaveResults}{Default: TRUE. If FALSE, disables csv saving.}
 }
 \value{
 Matrix of glycopeptide abundances with glycopeptides as rows and samples as columns
